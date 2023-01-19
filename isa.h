@@ -186,9 +186,11 @@ int DONT_WANT_TO_INLINE_THIS e()
 #endif
 
 
-#define EXTREME_HIGH_INSN_COST 0x100
-#define HIGH_INSN_COST 0x30
-#define MED_INSN_COST 0x10
+#define EXTREME_HIGH_INSN_COST 0x50
+#define HIGH_INSN_COST 0x20
+#define MED_INSN_COST 0x7
+
+
 
 #ifndef NO_PREEMPT
 
@@ -455,7 +457,9 @@ G_FARPAGEL:
 	UNSTASH_REGS;
 }
 #ifndef NO_PREEMPT
+#ifndef NO_INSN_WEIGHTS
 	if(EMULATE_DEPTH) instruction_counter += HIGH_INSN_COST; /*This is a very expensive instruction.*/
+#endif
 #endif
 D
 G_FARPAGEST:{
@@ -464,7 +468,10 @@ G_FARPAGEST:{
 	UNSTASH_REGS;
 }
 #ifndef NO_PREEMPT
+#ifndef NO_INSN_WEIGHTS
+
 	if(EMULATE_DEPTH) instruction_counter += HIGH_INSN_COST; /*This is a very expensive instruction.*/
+#endif
 #endif
 D
 G_LFARPC:
@@ -630,7 +637,9 @@ G_CLOCK:{
 
 }
 #ifndef NO_PREEMPT
+#ifndef NO_INSN_WEIGHTS
 	if(EMULATE_DEPTH) instruction_counter += EXTREME_HIGH_INSN_COST; /*This is a very VERY expensive instruction.*/
+#endif
 #endif
 D
 /*load from RX0*/
@@ -783,7 +792,9 @@ G_SEG_LD:
 		UNSTASH_REGS;
 	}
 #ifndef NO_PREEMPT
+#ifndef NO_INSN_WEIGHTS
 		if(EMULATE_DEPTH) instruction_counter += MED_INSN_COST; /*This is a very expensive instruction.*/
+#endif
 #endif
 	D
 
@@ -809,7 +820,9 @@ G_SEG_ST:
 
 	}
 #ifndef NO_PREEMPT
+#ifndef NO_INSN_WEIGHTS
 		if(EMULATE_DEPTH) instruction_counter += MED_INSN_COST; /*This is a very expensive instruction.*/
+#endif
 #endif
 	D
 #else
