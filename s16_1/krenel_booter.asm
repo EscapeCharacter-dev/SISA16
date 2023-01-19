@@ -62,12 +62,12 @@ bytes '\r' ,'\n', 0;
 
 	
 	llb %0x2500%;
-	lrx0 %/0xFF000%;
+	lrx0 %/0xFE00%;
 	lla %0xDE01%; //Disk write.
 	syscall;
 
 	llb %0x2600%;
-	lrx0 %/0xFF000%;
+	lrx0 %/0xFE00%;
 	lla %0xDE03%; //Disk read.
 	syscall;
 	la '\r'; putchar;
