@@ -42,11 +42,18 @@ static unsigned char audiomemory[0x100000];
 /*
 	The SDL2 driver keeps a "standard in" buffer.
 */
-static unsigned char stdin_buf[(SCREEN_WIDTH_CHARS * 64 * SCREEN_HEIGHT_CHARS)] = {0};
+
+
+static unsigned char stdin_buf[(SCREEN_WIDTH_CHARS * SCREEN_HEIGHT_CHARS)] = {0};
 /*
 	buffer pointer.
 */
 unsigned short stdin_bufptr = 0;
+
+static void stdin_buf_push_char(unsigned char c){
+	if(stdin_bufptr > sizeof(stdin_buf)) return;
+	stdin_buf[stdin_bufptr++] = c;
+}
 
 /*
 	Cursor position.
@@ -93,6 +100,7 @@ static void DONT_WANT_TO_INLINE_THIS sdl_audio_callback(void *udata, Uint8 *stre
 
 static void DONT_WANT_TO_INLINE_THIS di(){
 		SDL_DisplayMode DM;
+		stdin_bufptr = 0;
 	    if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
 	    {
 	        printf("SDL2 could not be initialized!\n"
@@ -185,17 +193,19 @@ static void pollevents(){
 		if(ev.type == SDL_QUIT) shouldquit = 0xFFff; /*Magic value for quit.*/
 		else if(ev.type == SDL_TEXTINPUT){
 			char* b = ev.text.text;
-			while(*b) {stdin_buf[stdin_bufptr++] = *b; b++;}
+			while(*b) {
+				stdin_buf_push_char(*b); b++;
+			}
 		}else if(ev.type == SDL_KEYDOWN){
 			switch(ev.key.keysym.scancode){
 				default: break;
-				case SDL_SCANCODE_DELETE: stdin_buf[stdin_bufptr++] = 0x7F; break;
-				case SDL_SCANCODE_BACKSPACE: stdin_buf[stdin_bufptr++] = 0x7F;break;
-				case SDL_SCANCODE_KP_BACKSPACE: stdin_buf[stdin_bufptr++] = 0x7F;break;
-				case SDL_SCANCODE_RETURN: stdin_buf[stdin_bufptr++] = 0xa;break;
-				case SDL_SCANCODE_RETURN2: stdin_buf[stdin_bufptr++] = 0xa;break;
-				case SDL_SCANCODE_KP_ENTER: stdin_buf[stdin_bufptr++] = 0xa;break;
-				case SDL_SCANCODE_ESCAPE: stdin_buf[stdin_bufptr++] = '\e';break;
+				case SDL_SCANCODE_DELETE: stdin_buf_push_char(0x7F); break;
+				case SDL_SCANCODE_BACKSPACE: stdin_buf_push_char(0x7F);break;
+				case SDL_SCANCODE_KP_BACKSPACE: stdin_buf_push_char(0x7F);break;
+				case SDL_SCANCODE_RETURN: stdin_buf_push_char(0xa);break;
+				case SDL_SCANCODE_RETURN2: stdin_buf_push_char(0xa);break;
+				case SDL_SCANCODE_KP_ENTER: stdin_buf_push_char(0xa);break;
+				case SDL_SCANCODE_ESCAPE: stdin_buf_push_char('\e');break;
 			}
 		}
 	}
