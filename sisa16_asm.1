@@ -1790,7 +1790,7 @@ split syntaxes were added to make turning labels into byte pairs easy and eventu
 the standard way to handle possibly-forward-reference values of any kind.
 
 ~
-.TP
+.SH
 .B Future plans
 
 Most presently and clearly,
@@ -1801,6 +1801,7 @@ This saddens me somewhat as I had always seen the large number of available opco
 
 At the time of writing, the last instruction I added was farstb.
 
+.SH
 .B Writing a real operating system
 
 This system will never be finished in my eyes until I have a commandline and I can self-host the assembler inside the SISA16 VM.
@@ -1816,7 +1817,7 @@ which is a huge step toward being able to have the assembler self-hosting... whi
 Once the assembler is self-hosted and bootstrapped, any person with just the emulator and a .bin for the assembler+OS can write code for the platform.
 
 
-
+.SH
 .B A C-like programming language
 
 I currently in the process of writing a compiler for a C-like programming language. I have the code generator
@@ -1833,8 +1834,7 @@ Once that happens, the floodgates are open on this architecture.
 
 If I can have a real human-readable programming language available for SISA16, it would make a huge difference in adoption and usage.
 
-
-
+.TP
 .B Rewrite for JIT?
 
 I have thought a bit about re-working the architecture to be JIT emulate-able.
@@ -1851,6 +1851,7 @@ Ultimately, I think I'll never do this. It goes against the spirit of this being
 
 if it's designed for JIT, it's a glorified JVM.
 
+.TP
 .B Real implementation
 
 The emulator is not a real implementation. it does not provide a replacement for the host architecture.
@@ -1861,6 +1862,7 @@ sisa16 registers mapped to ARM registers.
 
 it would then be possible to have a real box and say that it runs SISA16.
 
+.TP
 .B New assembler syntax?
 
 The current assembler syntax requires memorizing every single pnemonic you want to use, or at the very least, the general sense of them.
@@ -1873,6 +1875,7 @@ I wrote the current system.
 
 Using text replacement has its advantages, though...
 
+.TP
 .B Multithreading?
 
 This is another one of those 'Pretty much ruins the whole point' deals. If I added multithreading,
@@ -1885,6 +1888,7 @@ As for how I'd do it? Probably have multiple sisa16 instances running simultaneo
 
 maybe send commands in a server-client pattern.
 
+.TP
 .B Hosted emulator?
 
 I could probably port Fake6502 to Sisa16 assembly language and have a 6502 emulation mode.
@@ -1901,10 +1905,12 @@ Most intriguing though is the idea of having SISA16 emulate itself.
 
 the only real use for that which I can think of is to have a debugger on the platform.
 
+.TP
 .B LERNEK
 
 Rewrite krenel for the new operating system. I want a cool new name too. Preferably an intentiona misspell, like KRENEL (and KERNAL before it!)
 
+.TP
 .B Networking
 
 If (?when) I write a real operating system, i'd like to add features to the termios (or future) driver to add socketed networking support.
