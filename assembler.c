@@ -3188,9 +3188,9 @@ static void handle_cli_args(int argc, char** argv){
 		){
 			ASSEMBLER_SHOW_HELP:;
 			if(!clear_output) {
-				fputs("Usage:  ",stdout);
+				fputs("Usage: ",stdout);
 				fputs(argv[0],stdout);
-				fputs("[ARGS...]\n",stdout);
+				fputs(" [ARGS...]\n",stdout);
 				
 			}
 			puts("required argument: -i: specify input file.");
