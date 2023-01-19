@@ -1,0 +1,4 @@
+Quoted from Micro's help colors:
+
+The good news is that you can create your own syntax files, and
+place them in  `~/.config/micro/syntax` and Micro will use those instead.

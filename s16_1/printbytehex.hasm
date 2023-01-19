@@ -1,0 +1,140 @@
+
+
+
+..decl_farproc(LIBC_REGION):proc_printbytehex
+..export"proc_printbytehex"
+	//retrieve our argument.
+		//pop %3%; apop; push %4%;
+		arx0; lb 255; and;
+	//push it
+		apush
+		lb 4;rsh;
+		lb 0xf;and;
+		lb 6;mul;
+	llb %libc_printbytehex_jmptable_1%; add;ca;jmpc;
+	:libc_printbytehex_jmptable_1:
+		la 0x30;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x31;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x32;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x33;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x34;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x35;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x36;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x37;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x38;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x39;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x41;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x42;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x43;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x44;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x45;sc %libc_printbytehex_jmptable_1_end%;jmpc
+		la 0x46;sc %libc_printbytehex_jmptable_1_end%;jmpc
+	:libc_printbytehex_jmptable_1_end:
+	putchar
+
+	
+	apop;lb 15;and;lb 6;mul;
+	llb %libc_printbytehex_jmptable_2%;add;ca;jmpc;
+	:libc_printbytehex_jmptable_2:
+		la 0x30;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x31;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x32;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x33;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x34;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x35;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x36;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x37;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x38;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x39;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x41;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x42;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x43;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x44;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x45;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x46;sc %libc_printbytehex_jmptable_2_end%;jmpc
+	:libc_printbytehex_jmptable_2_end:
+	putchar
+farret
+
+..decl_farproc(LIBC_REGION):proc_printbytelchex
+..export"proc_printbytelchex"
+	//retrieve our argument.
+		arx0; lb 255; and;
+	//push it
+		apush
+		lb 4;rsh;
+		lb 0xf;and;
+		lb 6;mul;
+	llb %libc_printbytelchex_jmptable_1%; add;ca;jmpc;
+	:libc_printbytelchex_jmptable_1:
+		la 0x30;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x31;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x32;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x33;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x34;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x35;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x36;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x37;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x38;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x39;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x61;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x62;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x63;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x64;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x65;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+		la 0x66;sc %libc_printbytelchex_jmptable_1_end%;jmpc
+	:libc_printbytelchex_jmptable_1_end:
+	putchar
+	apop;lb 15;and;lb 6;mul;
+	llb %libc_printbytelchex_jmptable_2%;add;ca;jmpc;
+	:libc_printbytelchex_jmptable_2:
+		la 0x30;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x31;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x32;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x33;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x34;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x35;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x36;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x37;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x38;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x39;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x61;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x62;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x63;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x64;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x65;sc %libc_printbytehex_jmptable_2_end%;jmpc
+		la 0x66;sc %libc_printbytehex_jmptable_2_end%;jmpc
+	//We can re-use the same ending from printbytehex.
+
+
+
+..decl_farproc(LIBC_REGION):proc_print32lchex
+..export"proc_print32lchex"
+	rx3_0
+	lb 24; rx1b; rxrsh;
+	proc_printbytelchex
+	rx0_3;
+	lb 16; rx1b; rxrsh;
+	proc_printbytelchex
+	rx0_3
+	lb 8; rx1b; rxrsh;
+	proc_printbytelchex
+	rx0_3;
+	proc_printbytelchex;
+farret
+
+
+..decl_farproc(LIBC_REGION):proc_print32hex
+..export"proc_print32hex"
+	rx3_0
+	lb 24; rx1b; rxrsh;
+	proc_printbytehex
+	rx0_3;
+	lb 16; rx1b; rxrsh;
+	proc_printbytehex
+	rx0_3
+	lb 8; rx1b; rxrsh;
+	proc_printbytehex
+	rx0_3;
+	proc_printbytehex;
+farret

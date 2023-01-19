@@ -1,0 +1,19 @@
+//PRINTS~~~~~~~~~~~~~~~ (no newline)
+//CLOBBERS: A, B, C, RX0, RX1
+
+..decl_farproc(LIBC_REGION):proc_prints
+..export"proc_prints"
+	:libc_puts_looptop:
+		cbrx0;
+		farilda;
+		apush;
+		nota;bpop;jeq %libc_puts_loopend%
+		ab
+		putchar
+		rxincr
+	jim %libc_puts_looptop%;
+	:libc_puts_loopend:
+	farret;
+
+
+

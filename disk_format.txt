@@ -1,0 +1,26 @@
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~Sisa16 Disk Layout~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+0x000000 - 0x200000: Reserved for OS. Put your CLI here.
+0x200000 - 0x300000: Disk bitmap.
+0x300000 - <onward>: Files.
+
+Files are of a fixed size determined at their creation time. 
+
+They are a number of "pages" with a name at a starting location.
+
+File entries are a linked list starting at 0, pointing to "next" file entries.
+
+This is file entry format:
+
+typedef struct __attribute__((__packed__)) {
+	uint8_t identification; /*identification- is this a directory? Is this a file?*/
+	uint32_t filesize; /*Number of sectors in this file. Zero means it is the last file!*/
+	uint32_t next_file_addr; /*Linked list entry to next file.*/
+	unsigned char fname[247]; /*Null-terminated filename.*/
+} filenode;
+
+a file entry takes up exactly 256 bytes, the sector size of the sisa16 disk.

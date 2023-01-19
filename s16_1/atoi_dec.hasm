@@ -1,0 +1,39 @@
+..include"atou_dec.hasm"
+
+//ATOI_DEC~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Argument is in RX0, and is returned in RX0.
+//Clobbers: A,B,C,RX0,RX1,RX2,RX3
+//Read a base ten integer from a string.
+//Note that whitespace is *not* skipped
+
+
+..decl_farproc(LIBC_REGION):proc_atoi_dec
+..export"proc_atoi_dec"
+	//the passed string is in RX0.
+		proc_skipwhitespace
+		lb 0; rx2b;
+		rx3_0;
+	//before anything else, we need to test if the first character is NULL.
+	//Notice we are using the previous function's return as our return. This is a code de-duplication.
+		cbrx0; farilda; lb 0; cmp; sc %libc_atou_dec_loopout%; jmpifeq;
+	//Now, we test for the presence of + and - and use those to push
+		cbrx0; farilda; lb 45; cmp; sc %libc_atoi_dec_minus%; jmpifeq;
+		cbrx0; farilda; lb 43; cmp; sc %libc_atoi_dec_plus%; jmpifeq;
+		la 0; apush;
+		sc %libc_atoi_dec_handle%; jmpc;
+	:libc_atoi_dec_plus:
+		la 0; apush;
+		rx0_3; rxincr; rx3_0;
+		sc %libc_atoi_dec_handle%; jmpc;
+	:libc_atoi_dec_minus:
+		la 1; apush;
+		rx0_3; rxincr; rx3_0;
+	libc_atoi_dec_handle:
+		rx0_3;
+		proc_atou_dec;
+		apop;
+		jeq %libc_atoi_dec_handle_minus%;
+		farret;
+	libc_atoi_dec_handle_minus:
+		rxcompl;rxincr;
+		farret;

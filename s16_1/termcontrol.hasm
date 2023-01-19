@@ -1,0 +1,16 @@
+
+
+//\e[H\e[2J\e[3J
+
+
+
+.clear_terminal:la 0xc;interrupt;
+..export"clear_terminal"
+
+.flush_stdout:la 10;interrupt;
+..export"flush_stdout"
+
+.flush_stdout_user:la 10;syscall;
+..export"flush_stdout_user"
+
+

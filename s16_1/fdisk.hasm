@@ -1,0 +1,26 @@
+
+//These are meant to be used in conjunction with KRENEL.
+
+//FREAD
+//Arguments:
+//RX0: Destination of bytes to be read.
+//b: source of bytes to be read.
+
+..decl_farproc(LIBC_REGION):proc_fread
+..export"proc_fread"
+	lla %0xDE03%; //Disk read.
+	syscall;
+	farret;
+
+//FWRITE
+//Arguments:
+//RX0: Destination of bytes to be written to disk.
+//b: source of bytes to be read from memory.
+
+..decl_farproc(LIBC_REGION):proc_fwrite
+..export"proc_fwrite"
+	lla %0xDE01%; //Disk write.
+	syscall;
+	farret
+
+//Functions for Krenel.

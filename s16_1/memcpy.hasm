@@ -1,0 +1,98 @@
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~STRING AND MEMORY HANDLING~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+//MEMCPY~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Clobbers: A,B,C, RX0, RX1, RX2, RX3.
+//RETURNS: Nothing.
+//ARGS:
+//src: RX1
+//dest: RX0
+//bytes: RX2
+
+:libc_mcpy_src:
+nop;nop;nop;nop;
+
+..decl_farproc(LIBC_REGION):proc_memcpy
+..export"proc_memcpy"
+	rx3_0;
+	farstrx1 %~LIBC_REGION%, %libc_mcpy_src%;
+	lb 0;rx1b;
+	:libc_mcpy_looptop:
+		//Quit? if not, decrement.
+		rx0_2 
+		rxcmp
+		jeq %libc_mcpy_loopend%;
+		rxdecr
+		rx2_0
+		
+		//load a single byte.
+		farldrx0 %~LIBC_REGION%, %libc_mcpy_src%
+		cbrx0
+		farilda
+		rxincr
+		farstrx0 %~LIBC_REGION%, %libc_mcpy_src%
+		//store that single byte.
+		rx0_3
+			cbrx0
+			farista
+			rxincr
+		rx3_0
+		jim %libc_mcpy_looptop%;
+	:libc_mcpy_loopend:
+farret;
+
+
+
+//STRCPY~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Clobbers: A,B,C, RX0, RX1, RX2.
+//RETURNS: Nothing.
+//ARGS:
+//src: RX1
+//dest: RX0
+
+..decl_farproc(LIBC_REGION):proc_strcpy
+..export"proc_strcpy"
+		rx2_0;	//Destination in RX2.
+		//We just leave RX1 where it is.
+	:libc_strcpy_looptop:
+		//copy it.
+		rx0_1;
+		cbrx0;
+		farilda;
+		rx0_2;
+		cbrx0;
+		farista;
+		nota;
+		jeq %libc_strcpy_loopend%;
+		//increment source and destinatnion. We already have destination in RX0...
+		rxincr; rx2_0;
+		rx0_1; rxincr; rx1_0;
+		//do next copy.
+		jim %libc_strcpy_looptop%
+	:libc_strcpy_loopend:
+farret;
+
+
+//STRCAT~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Clobbers: A,B,C, RX0, RX1, RX2.
+//RETURNS: Nothing.
+//ARGS:
+//src string: RX1
+//dest string: RX0
+
+..decl_farproc(LIBC_REGION):proc_strcat
+..export"proc_strcat"
+	:libc_strcat_seek_null_looptop:
+		cbrx0;
+		farilda;
+		nota; 
+		jeq %libc_strcat_seek_null_loopend%;
+		rxincr;
+		jim %libc_strcat_seek_null_looptop%;
+	:libc_strcat_seek_null_loopend:
+	//We have found the position in the destination. Now, strcpy.
+	proc_strcpy;
+	farret
+

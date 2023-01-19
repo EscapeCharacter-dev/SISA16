@@ -1,0 +1,27 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 15
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: build_the_demos
+      run: make -B check CC=gcc
+    - name: show_environment_info
+      run: uname -a && cat /proc/cpuinfo && uname -r && lsb_release -a && gcc --version
+    - name: execute_program_asm
+      run: ./s16_1/program.asm
+    - name: execute_echo2_asm
+      run: ./s16_1/echo2.asm < isa.h
+    - name: show_gcc_version
+      run: gcc --version

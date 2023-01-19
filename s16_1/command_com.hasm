@@ -1,0 +1,166 @@
+:libc_command_com_prompt:
+..asciz:COM$
+
+:libc_command_com_help_printout:
+..ascii:SISA16 COMMAND.COM- the world's smallest operating system
+//'
+bytes '\r', '\n';
+..ascii:~~Let all that you do be done with charity~~
+bytes '\r', '\n';
+..ascii:help- display this help
+bytes '\r', '\n';
+..ascii:exec- execute region from disk
+bytes '\r', '\n';
+..ascii:quit- shutdown the commandline.
+bytes '\r', '\n';
+..ascii:dump- dump a page from disk.
+bytes '\r', '\n', 0;
+
+
+:libc_command_com_help:
+..asciz:help
+:libc_command_com_exec:
+..asciz:exec
+:libc_command_com_quit:
+..asciz:quit
+:libc_command_com_dump:
+..asciz:dump
+
+
+
+
+.libc_command_com_command_string_region:0x4
+.libc_command_com_exec_region:1
+
+
+:libc_COMMAND_COM:
+..export"libc_COMMAND_COM"
+	la 'C'; putchar;
+	la 'O'; putchar;
+	la 'M'; putchar;
+	la 'M'; putchar;
+	la 'A'; putchar;
+	la 'N'; putchar;
+	la 'D'; putchar;
+	la '.'; putchar;
+	la 'C'; putchar;
+	la 'O'; putchar;
+	la 'M'; putchar;
+	la '\r'; putchar;
+	la '\n'; putchar;interrupt;
+	push %5%;
+//TODO: parse command line.
+
+	:libc_command_com_looptop:
+		la '\r'; putchar;
+		la '\n'; putchar;interrupt;	
+		lrx0 0, %~LIBC_REGION%, %libc_command_com_prompt%;
+		proc_prints
+		la '\r'; putchar;
+		la '\n'; putchar;interrupt;
+		lrx0 0,%~libc_command_com_command_string_region%,0,0;
+		proc_gets;
+	//Now we check for some things.
+	lrx1 0,%~libc_command_com_command_string_region%,0,0;
+	lrx0 0,%~LIBC_REGION%,  %libc_command_com_help%
+	proc_strprefix;	//this returns 1 in A if it is strprefixing.
+	jeq %libc_lproc_ccom_help%;
+
+	//Now we check for some things.
+	lrx1 0,%~libc_command_com_command_string_region%,0,0;
+	lrx0 0,%~LIBC_REGION%,  %libc_command_com_quit%
+	proc_strprefix;	//this returns 1 in A if it is strprefixing.
+	jeq %libc_ccom_do_halt%;
+
+
+	//Now we check for some things.
+	lrx1 0,%~libc_command_com_command_string_region%,0,0;
+	lrx0 0,%~LIBC_REGION%,  %libc_command_com_dump%
+	proc_strprefix;	//this returns 1 in A if it is strprefixing.
+	jeq %libc_lproc_ccom_dump%;
+
+	//Now we check for some things.
+	lrx1 0,%~libc_command_com_command_string_region%,0,0;
+	lrx0 0,%~LIBC_REGION%,  %libc_command_com_exec%
+	proc_strprefix;	//this returns 1 in A if it is strprefixing.
+	jeq %libc_lproc_ccom_exec%;
+
+
+	
+	jim %libc_command_com_looptop%
+
+	libc_ccom_do_halt:
+	halt;
+
+
+libc_lproc_ccom_help:
+	lrx0 0, LIBC_REGION, %libc_command_com_help_printout%;
+	proc_prints;
+jim %libc_command_com_looptop%;
+
+libc_lproc_ccom_exec:
+	lrx0 0,%~libc_command_com_command_string_region%,0,4;
+	proc_atou_dec;
+	//rx0 contains the page from disk which is the beginning of a 64k program to launch
+	rx2_0;
+	llb %~libc_command_com_exec_region%,0;
+	blpush;
+	libc_ccom_exec_looptop:
+		rx0_2;
+		blpop;blpush;
+		lla %0xDE03%; //Disk read.
+		syscall;
+		alpop; aincr; alpush;
+		rxincr;rx2_0;
+		llb %~libc_command_com_exec_region%,0;
+		sub;
+		llb %0x100%;
+		cmp;
+		jne %libc_ccom_exec_looptop%;
+	alpop;
+	la 0xc; interrupt;
+	lb libc_command_com_exec_region;
+	lla %0xDE04%;  //exec region.
+	syscall;
+	halt;
+
+libc_lproc_ccom_dump:
+	lrx0 0,%~libc_command_com_command_string_region%,0,4;
+	proc_atou_dec;
+	//RX0 contains the page on disk we want to read from.
+	llb %~libc_command_com_exec_region%,0;
+	lla %0xDE03%; //Disk read.
+	syscall;
+
+	lrx2 0,%~libc_command_com_exec_region%,0,0;
+	libc_ccom_dump_looptop:
+		rx0_2
+		cbrx0
+		farilda
+		rx0a
+		proc_printbytelchex
+		la '\ '; putchar;
+		//check if this is divisible by 8.
+		arx2; lb 15; and; lb 15; cmp;
+		jeq %libc_ccom_dump_do_newline%;
+		
+		rx0_2
+		rxincr
+		rx2_0
+		jim %libc_ccom_dump_looptop%;
+	jim %libc_command_com_looptop%;
+	
+
+
+	libc_ccom_dump_do_newline:
+		la '\r'; putchar;
+		la '\n'; putchar; interrupt;
+		rx0_2
+		rxincr;
+		rx2_0;
+		lrx1 0,libc_command_com_exec_region,1,0;
+		rxcmp;
+		jne %libc_ccom_dump_looptop%;
+
+	jim %libc_command_com_looptop%;
+	

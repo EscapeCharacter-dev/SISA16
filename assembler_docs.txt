@@ -1,0 +1,203 @@
+
+SISA16 ASSEMBLY LANGUAGE DOCUMENTATION
+BEGAN AUTHORING JAN 18 2023
+
+
+NOTE:~~~~~~~~~~~~~~~~~~~~~
+
+This document assumes that you are familiar with some form of
+assembly language.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+POWER ON AND TYPICAL OPERATION
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+On power on, the BIOS of the machine copies the first sixteen megabytes from the non-volatile storage (Disk or ROM)
+into the first 16 megabytes of main memory.
+All registers are set to zero (except for current_task, which is set to 1) and program execution starts in the privileged process
+at address zero.
+
+This is where code begins to execute.
+
+In KRENEL, the example miniature monolithic kernel, a userland process is then spawned, whose memory is duplicated from the first sixteen megabytes
+of main memory into the second.
+
+The user process executes for some number of instructions before either executing an instruction that causes an error code,
+which is given to the privileged process, KRENEL, in its A register.
+
+The value in the "A" register returned to KRENEL indicates why the user process returned.
+
+it could be a system call, an interrupt, preemption, or the process could have halted.
+
+Process spawning as well as disk access are provided as a service, and a variety of other system calls are handled.
+
+A simple circular scheduler executes each process continually, responding to system calls and trying (poorly) to make sure
+
+that every task gets roughly the same amount of "attention".
+
+tasks can die or kill each other and if there are no tasks left to run, KRENEL shuts down and returns to its caller,
+
+which typically means that the machine shuts down and powers off.
+
+Hardware access is managed through four instructions, "getchar", "putchar", "interrupt", and "clock"
+
+the first three being privileged due to their nature, and the last one only getting the current system time information.
+
+getchar and putchar are typically used to provide serial I/O but they are envisioned as providing arbitrary read/write
+
+on their own bus.
+
+They both operate on 16 bit values despite their name.
+
+Interrupt is an implementation specific instruction that invokes the "Driver" (the hardware interface) to perform some operation.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+HARDWARE OVERVIEW~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The SISA16 architecture is a mixed 16 bit 32 bit architecture with only
+a single CPU, no multithreading.
+It supports preemption via instruction counting.
+
+These are its main general-purpose registers:
+A: 16 bits (16 bit accumulator)
+B: 16 bits
+C: 16 bits
+RX0: 32 bit (32 bit accumulator)
+RX1: 32 bit
+RX2: 32 bit
+RX3: 32 bit
+
+Here are the program control registers:
+PC: 16 bit
+PCR: 8 bit
+STP: 16 bit
+R: 8 bit (error flag)
+~
+Here are the registers used for multitasking
+
+CURRENT_TASK: 8 bit
+EMULATE_DEPTH: 1 bit (flag)
+
+Here are the registers used for control of "The Segment":
+
+seg_access_mask- 32 bit
+seg_access_offset- 32 bit
+
+~~MEMORY MODEL~~
+
+Memory accessible by SISA16 is divied up in this fashion:
+* First, there is "THE SEGMENT". It is an arbitrarily large region of memory
+which has a 40 byte address. It is not possible to execute code in it or access
+it directly, but 256 byte "pages" can be copied into and out of it.
+
+It is the only portion of memory with something akin to an MMU,
+the rest of memory is segmented differently.
+
+* Second, there is the "MAIN MEMORY". Main memory is divided up
+into N+1 16 megabyte address spaces, where N is the number of tasks
+in the implementation.
+The first 16 megabytes is reserved for the operating system
+and is the main memory of the "priviliged process".
+the other 16 megabyte address spaces are for "unprivileged processes"
+which would primarily be userland processes, but could be drivers or anything.
+
+* In a particular 16 megabyte address space, there are 256 "regions" of 65,536 bytes.
+
+The very first region is the "STACK REGION" as it holds the stack pointer.
+
+There is no hardware distinction between any of the other regions. However, by convention...
+
+* Region 1 holds the main routine(s) of a userland process
+* Region 2 holds the core system libraries loaded into the address space of a userland process.
+
+Different instructions access memory differently.
+
+* Stack push and pop instructions such as rx0push or alpop interact solely in region 0, the stack region.
+* 16 bit addressing instructions, such as strx0 or ilda operate in the region indicated by PCR, which is where
+the program counter is currently executing instructions.
+* 24 bit addressing instructions, which usually start with "far" but not always (as is the case with istrx0_1)
+	can access any portion of the task's 16 megabyte address space.
+* user_ instructions are only usable by the privileged process and manipulate the address space and registers in the 
+	register file of the active task, such that the changes will be effective once the task is resumed.
+	
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ASSEMBLY LANGUAGE
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Different addressing modes are used for different instructions,
+which are indicated by their pneumonic-
+
+for instance, these are the MOV-esque operations to directly modify
+the A register,
+
+a 16 bit register which can be used for 8 bit loads and stores
+as well as mathematic operations.
+
+
+la - (immediate) load (byte) into a
+lda - (memory) load (byte) into a
+lla - (immediate) large load (short) into a
+llda - (memory) large load (short) into a
+ilda - (indirect) load (byte) into a
+illda - (indirect) large load (short) into a
+farllda - large load (short) into a 				(24 bit CB addressing)
+farilda - far indirect load (byte) into a 			(24 bit CB addressing)
+farillda - (far indirect) large load (short) into a (24 bit CB addressing)
+
+You can also move between registers:
+
+ab - move the contents of the B register into a.
+ac - move the contents of the C register into a.
+arx0 - move the bottom 16 bits of the 32 bit register RX0 into a.
+arx1 - move the bottom 16 bits of the 32 bit register RX1 into a.
+arx2 - move the bottom 16 bits of the 32 bit register RX2 into a.
+arx3 - move the bottom 16 bits of the 32 bit register RX3 into a.
+
+A can also interact with the stack pointer:
+
+astp- set a to the value of the stack pointer
+popa- subtract a from the stack pointer.
+pusha- add a to the stack pointer.
+
+A can be stored:
+
+sta - store a (byte)
+stla - store large a (short)
+ista - indirect store a (byte)
+istla - indirect store large a (short)
+<There is no farsta>
+farstla - store large a (short) to far address (24 bit)
+farista - store a (byte) to address using far indirect CB addressing (24 bit)
+faristla - store a (short) to address using far indirect CB addressing (24 bit)
+
+A is special because it is one of the two 8 bit combo registers. its bottom 8 bits can be combined with B into C:
+
+cba
+cab
+
+These are the addresing modes used for loads and stores:
+
+local/16 bit direct- accessing memory in the PCR region. note that boundary reads and writes go beyond the region boundaries and will wrap
+the entire 24 bit address space if done out of bounds.
+
+local/16 bit indirect- using the C register to indirectly access a location in the PCR region.
+
+far/24 bit direct- Accessing any memory location. 
+
+far/24 bit indirect- Any memory location.
+	This comes in four flavors:
+		CB: using a region number in C and a local address in B
+		CA: using a region number in C and a local address in A
+		ildrx0_0/istrx1_0: using the bottom 24 bits of RX0.
+		ildrx0_1/istrx0_1: using the bottom 24 bits of RX1.
+
+farpage- copies entire pages of memory, addressed with 16 bits, using C and A.
+
+user-  any user_ instruction designed to modify memory, which behaves like the non-user variants, but
+are only usable by the privileged process 
+
+
+		
+	
+

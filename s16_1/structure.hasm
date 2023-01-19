@@ -1,0 +1,125 @@
+
+//COMPILATION OF MACROS TO MAKE WRITING ASSEMBLY LANGUAGE EASIER.
+
+.eq:lb 1;and;
+.neq:lb 1;and;nota;
+.gt:lb 2;and;boolify;
+.lt:nota;
+.lte:lb 2;and;nota;
+.gte:boolify;
+
+..export"eq"
+..export"neq"
+..export"gt"
+..export"lt"
+..export"lte"
+..export"gte"
+
+//These only modify the C and PC registers during their execution.
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//meant to be invoked like this: [FOR]{name}{init}{condition eval}{step}
+
+//the condition is evaluated as "is equal" in register a- is the value in register a equal?
+
+.FOR:asm_arg1; asm_label\asm_arg0_FORTOP;\
+asm_arg2;jne %asm_arg0_FOREND%;\
+asm_arg3;jim %asm_arg0_FORTOP%;\
+asm_label\asm_arg0_FOREND;
+//this is the one that doesn't require a name
+
+.for: [FOR]{ASM_GEN_NAME}{asm_arg0}{asm_arg1}{asm_arg2}
+
+..export"FOR"
+..export"for"
+
+//Meant to be invoked [IF]{name}{condition}{code}
+//the condition code must leave a value in register
+.IF:asm_arg1;jne %asm_arg0_IFEND%;asm_arg2;asm_label\asm_arg0_IFEND;
+.if:[IF]{ASM_GEN_NAME}{asm_arg0}{asm_arg1}
+
+..export"IF"
+..export"if"
+
+//[WHILE]{name}{condition}{step}
+.WHILE:asm_label\asm_arg0_WHILETOP;asm_arg1;jne %asm_arg0_WEND%;asm_arg2;jim %asm_arg0_WHILETOP%;asm_label\asm_arg0_WEND;
+.while:[WHILE]{ASM_GEN_NAME}{asm_arg0}{asm_arg1}
+
+..export"WHILE"
+..export"while"
+
+//[GOTOIF]{destination}{condition}
+.GOTOIF:asm_arg1;jeq %asm_arg0%;
+..export"GOTOIF"
+
+
+//poke and peek. Why not?
+
+//[poke]{calculate address in RX0, store it in RX3}{calculate value, in A}
+.poke:asm_arg0;rx0push;asm_arg1;rx0pop;cbrx0;farista
+..export"poke"
+//[peek]{calculate address in RX0}
+.peek:asm_arg0;cbrx0;farilda
+..export"peek"
+
+
+//[pokeS]{calculate address in RX0, store it in RX3}{calculate value, in A}
+.pokeS:asm_arg0;rx0push;asm_arg1;rx0pop;cbrx0;faristla
+..export"pokeS"
+//[peekS]{calculate address in RX0}
+.peekS:asm_arg0;cbrx0;farillda
+..export"peekS"
+
+
+//[poke32]{calculate address in RX0, store it in RX3}{calculate value, in RX0}
+.pokeL:asm_arg0;rx0push;asm_arg1;rx1pop;istrx0_1
+..export"pokeL"
+//[peek]{calculate address in RX0}
+.peekL:asm_arg0;ildrx0_0
+..export"peekL"
+
+//Get pointer to function argument asm_arg0 bytes below the stack pointer,
+//with asm_arg1 bytes of current function usage.
+//[address_arg]{bytes_in_front_of_return_address}{stack_bytes_used_by_function}
+//the pointer is stored in register a.
+
+.farproc_address_arg:astp;llb %asm_arg1%;sub;llb %asm_arg0%;sub;lb 3;sub;
+..export"farproc_address_arg"
+
+//Equivalent for region-local procedures
+.lproc_address_arg:astp;llb %asm_arg1%;sub;llb %asm_arg0%;sub;lb 2;sub;
+..export"lproc_address_arg"
+
+//lowercase versions are for places where the stack depth is very low.
+
+.stp_dig8: astp;lb %~asm_arg0%;sub;sc %0%;ca; farilda;
+.stp_Dig8: astp;llb %asm_arg0%;sub;sc %0%;ca; farilda;
+.stp_dig16:astp;lb %~asm_arg0%;sub;sc %0%;ca; farillda;
+.stp_Dig16:astp;llb %asm_arg0%;sub;sc %0%;ca; farillda;
+.stp_dig32:astp;lb %~asm_arg0%;sub;sc %0%;farildrx0;
+.stp_Dig32:astp;llb %asm_arg0%;sub;sc %0%;farildrx0;
+
+
+//These now no longer destroy RX0.
+.stp_bury8: ca;astp;lb %~asm_arg0%;sub;ba;ac;sc %0%;farista;
+.stp_Bury8: ca;astp;llb %asm_arg0%;sub;ba;ac;sc %0%;farista;
+.stp_bury16:ca;astp;lb %~asm_arg0%;sub;ba;ac;sc %0%;faristla;
+.stp_Bury16:ca;astp;llb %asm_arg0%;sub;ba;ac;sc %0%;faristla;
+
+//the rx0 register must be preserved across these.
+.stp_bury32:astp;lb %~asm_arg0%;sub;sc %0%;faristrx0;
+.stp_Bury32:astp;llb %asm_arg0%;sub;sc %0%;faristrx0;
+
+..export"stp_dig8"
+..export"stp_Dig8"
+..export"stp_dig16"
+..export"stp_Dig16"
+..export"stp_dig32"
+..export"stp_Dig32"
+
+..export"stp_bury8"
+..export"stp_Bury8"
+..export"stp_bury16"
+..export"stp_Bury16"
+..export"stp_bury32"
+..export"stp_Bury32"
+

@@ -1,0 +1,74 @@
+
+
+//RXSQRRT
+//finds the sqrt of the number passed in RX0.
+//rx2: the number we're trying to find the square root of.
+//rx3: the current number we're trying.
+//Only unsigned numbers!
+
+..decl_farproc(LIBC_REGION):proc_rxsqrt
+..export"proc_rxsqrt"
+	rx2_0; // our argument, x, which is in rx2 now.
+	
+	lb 1; rx3b; // r = 1, r is in rx3
+	rx0_2; lb 0; rx1b; rxcmp; jeq %libc_rxsqrt_return%; //If x == 0 return 0
+	//while(r*r < x) r*=2;
+	//x ends up in rx1 for the comparison here, so we expect LESS THAN.
+	//qq
+	[while]\//
+			{rx0_3;rx1_3;rxmul;rx1_2;rxcmp;lb 0; cmp;}\//
+			{rx0_3;lb 1; rx1b; rxlsh; rx3_0;}
+	//qq
+	//while(r*r > x) r--;
+	[while]\//
+			{rx0_3;rx1_3;rxmul;rx1_2;rxcmp;lb 2; cmp;}\//
+			{rx0_3;rxdecr;rx3_0;}
+	//qq
+	//return the value in RX3
+	rx0_3;
+
+
+	libc_rxsqrt_return:farret;
+
+//Find absolute value of value in RX0;
+//Quashes RX1 and RX0
+//Return value in RX0
+..decl_farproc(LIBC_REGION):proc_rxabs
+..export"proc_rxabs"
+	la 0; rx1a;
+	rxicmp;lb 0; cmp;
+	jne %libc_rxabs_end%;
+	rxcompl; rxincr; //invert the number.
+	//Check if it's still negative.
+	rxicmp;lb 0; cmp;
+	jne %libc_rxabs_end%;
+	rxdecr; //It was the special value! make it positive
+	libc_rxabs_end:farret;
+
+//raise integer in RX0 to power in RX1.
+//Both are signed integers.
+
+..decl_farproc(LIBC_REGION):proc_rxpowi
+..export"proc_rxpowi"
+	rx2_0; //x
+	rx3_1; //y
+
+	//is y 0? if so, return 1.
+	rx0_1; lb 0; rx1b; rxicmp; lb 1; rx0b; jeq %libc_rxpowi_return%;
+	//initialize r to 1
+	lb 1; rx0b; 
+	rx0push;
+		//if rx3 (y) is greater than 1, multiply r by x and then decrement y until it reaches zero.
+		//qq
+		[if]{rx0_3;lb 1;rx1b; rxicmp;    lb 2;cmp;}{\//
+			[for]\//
+			{;}\//
+			{rx0_3;lb 0; rx1b; rxicmp;lb 2; cmp;}{rx0pop;rx1_2;rxmul;rx0push;   rx0_3;rxdecr;rx3_0;   }}
+		//if rx3 (y) is less than 0, divide r by x and then increment y until it reaches zero.
+		[if]{rx0_3;lb 0;rx1b; rxicmp; lb 0;cmp;}{\//
+			[for]{;}\//
+			{rx0_3;lb 0; rx1b; rxicmp;lb 0; cmp;}\//
+			{rx0pop;rx1_2;rxidiv;rx0push;   rx0_3;rxincr;rx3_0;}\//
+		}
+	rx0pop; //Now, we return r.
+	libc_rxpowi_return: farret;

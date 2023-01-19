@@ -1,0 +1,172 @@
+//STRCMP
+//RX0: string 1
+//RX1: string 2
+
+:libc_strcmp_charstore_1:
+bytes %0%;
+:libc_strcmp_charstore_2:
+bytes %0%;
+
+..decl_farproc(LIBC_REGION):proc_strcmp
+..export"proc_strcmp"
+	rx2_0;
+
+	libc_strcmp_looptop:
+		rx0_2; cbrx0;
+		farilda; farstla %~LIBC_REGION%, %libc_strcmp_charstore_1%
+		rx0_1; cbrx0;
+		farilda; farstla %~LIBC_REGION%, %libc_strcmp_charstore_2%
+
+		//see if they are different.
+		farllda %~LIBC_REGION%, %libc_strcmp_charstore_1%
+		farlldb %~LIBC_REGION%, %libc_strcmp_charstore_2%
+		cmp;sc %libc_strcmp_loopfail%; jmpifneq;
+		//These two characters are equal!
+		//Check if B is zero.
+		ab; nota; sc %libc_strcmp_loopsucc%; jmpifeq;
+
+		//increment both pointers and jump.
+		rxincr; rx1_0;
+		rx0_2; rxincr; rx2_0;
+		sc %libc_strcmp_looptop%; jmpc;
+	libc_strcmp_loopsucc:
+		la 0;
+		farret;
+	libc_strcmp_loopfail:
+		//return the subtraction of the two.
+		farllda %~LIBC_REGION%, %libc_strcmp_charstore_1%
+		farlldb %~LIBC_REGION%, %libc_strcmp_charstore_2%
+		sub;
+		farret
+
+//STRPREFIX
+//rx0: the string to prefix with.
+//rx1: the string that should be prefixed with the string at [rx0]
+
+..decl_farproc(LIBC_REGION):proc_strprefix
+..export"proc_strprefix"
+	rx2_0;
+
+	libc_strprefix_looptop:
+		rx0_2; cbrx0;
+		farilda; farstla %~LIBC_REGION%, %libc_strcmp_charstore_1%
+		rx0_1; cbrx0;
+		farilda; farstla %~LIBC_REGION%, %libc_strcmp_charstore_2%
+
+		//see if we have reached a success or failure condition.
+		//if the first string (the prefix string) has ended, we have succeeded.
+		//if the second string (the string that should be prefixed with the first) has ended, we have failed.
+		farllda %~LIBC_REGION%, %libc_strcmp_charstore_1%; 
+			nota; 
+			sc %libc_strprefix_loopsucc%; 
+			jmpifeq;
+		farllda %~LIBC_REGION%, %libc_strcmp_charstore_2%; 
+			nota; 
+			sc %libc_strprefix_loopfail%; 
+			jmpifeq;
+
+		//see if they are different.
+		farllda %~LIBC_REGION%, %libc_strcmp_charstore_1%
+		farlldb %~LIBC_REGION%, %libc_strcmp_charstore_2%
+		cmp;sc %libc_strprefix_loopfail%; jmpifneq;
+
+		//increment both pointers and jump.
+		rxincr; rx1_0;
+		rx0_2; rxincr; rx2_0;
+		sc %libc_strprefix_looptop%; jmpc;
+
+	libc_strprefix_loopsucc:
+		la 1;
+		farret;
+	libc_strprefix_loopfail:
+		la 0;
+		farret
+
+
+//STRDUPE
+//Receives a string to duplicate in RX0.
+
+:libc_strdupe_retval_store:
+bytes %/0%;
+
+..decl_farproc(LIBC_REGION):proc_strdupe
+..export"proc_strdupe"
+	rx0push;
+	proc_strlen;
+	rxincr; rx0push;  //We also need a null terminator...
+	//fetch us some memory!
+	proc_alloc;
+	//If alloc failed, we simply abort()
+	lb 0; rx1b; rxcmp; sc %libc_strdupe_abort%; jmpifeq;
+	farstrx0 %&libc_strdupe_retval_store%;
+	rx2pop;		//The number of bytes.
+	rx1pop;		//the source to copy from.
+	proc_memcpy;
+	farldrx0 %&libc_strdupe_retval_store%;
+	farret
+	:libc_strdupe_abort:
+	lb 0; div;
+	halt;
+
+
+//RX0: the number
+//RX1: the destination.
+..decl_farproc(LIBC_REGION):proc_utoa_dec
+..export"proc_utoa_dec"
+	rx2_0;	//rx2 holds our number.
+	rx3_1; //rx3 holds the dest pointer.
+
+	//if this is
+	lb 0; rx1b; rxcmp; sc %libc_utoa_write_zero%; jmpifeq;
+	//Loop to find the highest power of 10.
+
+
+	lrx1 %/1000000000%; rx1push;
+		[while]\//
+			{rx1pop;rx1push;rx0_2;rxdiv;lb 10; rx1b; rxmod; lb 0; rx1b; rxcmp;}\//( ( (rx2/i) % 10) == 0)
+			{rx0pop; lb 10; rx1b; rxdiv; rx0push;}	//Divide i by 10.
+
+		//we now have the highest power of 10 in i. use this to write digits.
+		
+		[while]\//
+			{rx0pop;rx0push;lb 0;rx1b;rxcmp;lb 2; cmp;}\//condition, (i > 0)
+			{\//
+				\//*dest = ((num/i)%10) + '0';
+				rx0_2;rx1pop;rx1push;rxdiv;\//(num / i)
+				lb 10; rx1b; rxmod; arx0;	\// % 10, put in a.
+				\//lb 10; mod;	\//% 10
+				lb '0'; add;	\//add '0'
+				rx0_3; cbrx0; farista;\//write to dest.
+				\//dest++;
+				rxincr; rx3_0;\//increment dest.
+				rx0pop; lb 10; rx1b; rxdiv; rx0push;\//Divide i by 10.
+			}
+	rx1pop;
+
+	//now, write zero.
+	rx0_3; cbrx0; la 0; farista;
+	//return.
+	farret;
+	
+	libc_utoa_write_zero:
+		rx0_3; cbrx0; la '0'; farista; 
+		rxincr; cbrx0; la 0; farista; 
+		farret;
+
+//RX0: the number
+//RX1: the destination.
+
+..decl_farproc(LIBC_REGION):proc_itoa_dec
+..export"proc_itoa_dec"
+	rx2_0;
+	rx3_1;
+	lb 31; rx1b; rxrsh; arx0; nota; sc %libc_itoa_dec_noneg%; jmpifeq;
+	rx0_3;cbrx0; 
+	la '-'; farista; //it is a negative number. Put a negative sign in front!
+	rxincr; rx3_0;
+	rx0_2; rxcompl; rxincr; rx2_0;
+	:libc_itoa_dec_noneg:
+		rx0_2;
+		rx1_3;
+		proc_utoa_dec
+	farret

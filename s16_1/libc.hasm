@@ -1,0 +1,25 @@
+//	SISA16 "LIBC" STANDARD LIBRARY
+// Intended to fit in a single region.
+// [C] David M.H.S. Webster 2021
+// Written for the Public Domain.
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~Let all that you do be done with love~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+.?LIBC_REGION:2
+..export"LIBC_REGION"
+.?LIBC_EXPORT_DCL:region LIBC_REGION;
+
+LIBC_EXPORT_DCL
+asm_begin_region_restriction;
+	..include"structure.hasm"
+	..include"krenel.hasm"
+
+	//page map location
+	:libc_alloc_page_map:
+	..export"libc_alloc_page_map"
+	//the majority of the LIBC is taken up by this...
+	//
+	fill 15500,0;
+asm_end_region_restriction;

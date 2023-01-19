@@ -1,0 +1,905 @@
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~ P R I V I L E G E D C O D E ~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+//This file contains code that is meant to be executed at the privileged level. I.E. you would boot
+//the system into this.
+
+//User-mode code should be exec'd by a privileged kernel such as KRENEL.
+
+//These four nops are very important. they are over-written with a 
+nop;nop;nop;nop;
+ldrx0 %libc_krenel_stack_data_store%; //HUGE NOTE: upon a boot of the libc, this will load zeroes.
+farstrx0 %&0%
+.libc_krenel_jumploc:@+1+
+//This is what happens if you boot the libc directly.
+//this location is also used for the initialization of krenel,
+//to start PID 0.
+//
+lrx0 %/libc_booter%;
+farjmprx0;
+
+///
+:libc_krenel_stack_data_store:
+nop;nop;nop;nop;
+
+//krenel constants:
+//MUST BE A POWER OF TWO, must be identical to the constant in isa_pre.h SISA_MAX_TASKS
+.libc_krenel_max_active_tasks:16
+//Must be one less than that power of two, for an "and" mask:
+.libc_krenel_max_active_tasks_mask:15
+
+//Maximum number of times a syscall or interrupt can be made before a task switch occurs.
+.libc_krenel_max_returns:40
+
+//the region where code to execute is stored.
+.libc_krenel_exec_region:1
+
+
+
+//Maximum amount of disk allowed to be used.
+.libc_krenel_max_disk_usage:0x400000
+.libc_krenel_max_disk_mask: 0x3fffff
+
+
+//Reserved page for disk IO.
+.libc_krenel_diskio_page:0xFF00
+//.libc_krenel_diskio_next_page:0xFF01
+
+//We reserve 2 megabytes for creating a PID0 program.
+//The rest of the disk can be written to and read from, by any program.
+
+//.libc_krenel_disk_reserved:0x2000
+
+
+..include"printbytehex.hasm"
+..include"fdisk.hasm"
+..include"puts.hasm"
+..include"strlen.hasm"
+..include"memcpy.hasm"
+..include"gets.hasm"
+..include"atoi_dec.hasm"
+..include"atof_dec.hasm"
+..include"sqrt.hasm"
+..include"wait.hasm"
+..include"termcontrol.hasm"
+..include"alloc.hasm"
+..include"strutil.hasm"
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~K R E N E L~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Give it a location to boot as PID 0, and it will, in RX0.
+
+..decl_lproc:libc_lproc_krenel_print_krenel
+	la '\r'; putchar;
+	la '\n'; putchar;
+	la 'K'; putchar;
+	la 'R'; putchar;
+	la 'E'; putchar;
+	la 'N'; putchar;
+	la 'E'; putchar;
+	la 'L'; putchar;
+	la '\:'; putchar;
+	la '\ '; putchar;
+	ret
+
+
+
+//Load user page according to register B.
+..decl_lproc:libc_lproc_krenel_load_user_page
+	user_getb;ca;
+	lla %libc_krenel_diskio_page%;
+	user_farpagel;
+	ret
+
+//all tasks start out as 0- inactive.
+//these are shorts. That's why we do two fills
+:libc_krenel_task_isactive_array:
+fill libc_krenel_max_active_tasks, 0;
+
+
+:libc_krenel_task_nreturns:
+bytes 0,0;
+
+:libc_krenel_active_task_index:
+bytes 0;
+
+:libc_krenel_nactive_tasks:
+bytes 0;
+
+//when there are a high number of tasks,
+//use this sic value
+:libc_krenel_perf_sic:
+bytes %/0x2000%;
+
+
+:libc_krenel_calc_sic:
+	ldrx0 %libc_krenel_perf_sic%
+	task_sic
+	ret
+
+:libc_krenel_do_shutdown_print:
+bytes 1;
+
+
+//TODO: implement some sort of BRK implementation
+//PID 0 owns the entire segment to begin with.
+
+:libc_krenel_owns_segment_index:
+bytes 0;
+
+:libc_krenel_segment_lock:
+bytes 1;
+
+..decl_lproc:libc_lproc_krenel_configure_segment
+		lda %libc_krenel_active_task_index%
+		ldb %libc_krenel_owns_segment_index%
+		cmp;
+		jeq %libc_krenel_configure_segment_make_own_segment%;
+			//we don't own it! The mask and offset should be configured to prevent any form of segment access, it should always generate an error.
+			//Offset=pages is a magic value for preventing segment access.
+			//TODO: Provide users with access to the segment. Divy up the segment.
+			lb 0; 
+			rx1b
+			seg_pages
+			seg_config
+			ret
+		libc_krenel_configure_segment_make_own_segment:
+			//we do own it!
+			seg_pages; rxdecr; rx1_0;	//mask of 1 less than seg_pages- meaning the entire segment is accessible
+			lb 0; rx0b;					//offset of 0
+			seg_config;
+			ret;
+
+
+..decl_farproc(LIBC_REGION):proc_krenel
+..export"proc_krenel"
+
+..sym(LIBC_REGION):LIBC_KRENEL_BEGIN_REAL
+..export"LIBC_KRENEL_BEGIN_REAL"
+
+
+:LIBC_KRENEL_BEGIN:
+..export"LIBC_KRENEL_BEGIN"
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~ KRENEL STARTUP ROUTINE ~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//We are passed a place to jump to in RX0. Store it away while we set up the krenel.
+		rx0push;
+	//setup the allocation bitmap.
+		proc_alloc_reset_allocation_bitmap
+	//Set input mode to be non-blocking.
+		lla %0xE000%; interrupt;
+	//Set the active task's info.
+		la 0; stla  %libc_krenel_task_nreturns%;	
+		la 0; sta  %libc_krenel_active_task_index%;//TODO single byte write
+		la 0; sta  %libc_krenel_owns_segment_index%;
+		la 1; sta  %libc_krenel_segment_lock%;
+		la 1; sta  %libc_krenel_nactive_tasks%; //we boot the pointer we were passed!
+	//Set all tasks to be zero
+		lb 0;rx0b; 
+		lb libc_krenel_max_active_tasks; rx1b;
+		libc_krenel_zero_tasks_looptop:
+			arx0;task_set;task_kill;
+			arx0;
+			llb %libc_krenel_task_isactive_array%;	//get address of isactive array
+			add;ca;									//index the array to get the element's address
+			la 0;ista;								//store zero
+			rxincr;rxcmp;lt; 						//if less than, continue
+			jeq %libc_krenel_zero_tasks_looptop%;
+	//PID 0 is the initial program... make its isactive index to be active.
+		//sc %LIBC_REGION%;
+		la 1;
+		sta   %libc_krenel_task_isactive_array%; //TODO change this to sta
+		la 0; task_set;
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//~~~Bootloader code~~~~~~~~~~~~~~~~~~~
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//get that important argument back!
+		rx0pop;
+	//write the place to jump to, to the jumploc
+		farstrx0 %~LIBC_REGION%, %libc_krenel_jumploc%;
+	//We must copy three bytes, so we do 4 for speed's sake.
+		farldrx0 %&0%
+		farstrx0 %~LIBC_REGION%, %libc_krenel_stack_data_store%
+
+		//this is our magic bootloader that boots the unpriviliged process.
+		//the code is "la %~LIBC_REGION%; lfarpc;
+		//The 
+		lb 0; cb; la 2; farista; //code for "la"
+		lb 1; la %~LIBC_REGION%; farista; //load libc's region into a.
+		lb 2; la 0x44; farista; //0x44 is lfarpc.
+
+		push %10%; libc_lproc_krenel_configure_segment; pop %10%;
+		lcall %libc_krenel_calc_sic%
+		emulate;
+	//restore stack integrity.
+		ldrx0 %libc_krenel_stack_data_store%
+		farstrx0 %&0%
+	//a holds the return value. CHECK IT.
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~ KRENEL SCHEDULER ROUTINE ~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	libc_krenel_cswitch_looptop:
+	
+		alpush; 
+		lb 0xff; cmp; blpop; jeq %libc_krenel_try_select_task%;
+		ab; alpush;
+
+		lb 19; cmp; blpop; jeq %libc_krenel_syscall%;
+		ab; alpush;
+		
+
+		lb 18; cmp; blpop; jeq %libc_krenel_tried_interrupt%;
+		ab; alpush;
+		
+		lb 17; cmp; blpop; jeq %libc_krenel_putchar%;
+		ab; alpush;
+		
+		lb 16; cmp; blpop; jeq %libc_krenel_getchar%;
+		ab; alpush;
+
+
+		
+		lb 0; cmp; blpop; jeq %libc_krenel_cswitch_killtask%;
+		la '\r'; putchar; la '\n'; putchar;
+		libc_lproc_krenel_print_krenel;
+		la 'e'; putchar;
+		la 'x'; putchar;
+		la 'i'; putchar;
+		la 't'; putchar;
+		la '\ '; putchar;
+		la 'e'; putchar;
+		la 'r'; putchar;
+		la 'r'; putchar;
+		la '\ '; putchar;
+		rx0b;
+		proc_printbytehex;
+		la '\r'; putchar; 
+		la '\n'; putchar;interrupt;
+		jim %libc_krenel_cswitch_killtask%;
+	:libc_krenel_syscall:
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~ KRENEL SYSCALL IMPLEMENTATIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			user_geta;ca;
+				lb 0xa; cmp;jeq %libc_krenel_syscall_flush_stdout%;
+			ac;	lb 0xc; cmp;jeq %libc_krenel_syscall_clear_term%;
+			ac;	nota; 		jeq %libc_krenel_syscall_flush_stdout%;
+//AV only
+			ac;					jeq %libc_krenel_syscall_pumpevents%; 						//Already 1!
+			ac;  lb 2; cmp; 		jeq %libc_krenel_syscall_read_gamer_buttons%;
+			ac;  lb 0x17; cmp; 	jeq %libc_krenel_syscall_get_av_user%;
+			ac;  lb 7; cmp; 		jeq %libc_krenel_syscall_set_av_user%;
+			ac;  lb 3; cmp; 		jeq %libc_krenel_syscall_audio_play%;
+			ac;  lb 4; cmp; 		jeq %libc_krenel_syscall_audio_kill%;
+			ac;  lb 5; cmp; 		jeq %libc_krenel_syscall_fgcolor%;
+			ac;  lb 8; cmp; 		jeq %libc_krenel_syscall_palette_set%;
+			ac;  lb 0x400; cmp;	jeq %libc_krenel_syscall_audio_memcpy%;
+			ac;  lb 0x500; cmp;	jeq %libc_krenel_syscall_fillrect%;
+			ac;  lb 0x501; cmp;	jeq %libc_krenel_syscall_videomemcpy%;
+			ac;  lb 0x502; cmp;	jeq %libc_krenel_syscall_videogetw%;
+			ac;  lb 0x503; cmp;	jeq %libc_krenel_syscall_videogeth%;
+
+			ac;	llb %0xDEAD%; cmp;	jeq %libc_krenel_shutdown%;
+			ac;	llb %0xDE00%; cmp;	jeq %libc_krenel_syscall_kill_pid%;
+			ac;	llb %0xDE01%; cmp;	jeq %libc_krenel_syscall_disk_write%;
+			ac;	llb %0xDE02%; cmp; 	jeq %libc_krenel_try_select_task%;		//Sleep.
+			ac;	llb %0xDE03%; cmp;	jeq %libc_krenel_syscall_disk_read%;
+			ac;	llb %0xDE04%; cmp;	jeq %libc_krenel_syscall_exec%;
+			ac;	llb %0xDE05%; cmp;	jeq %libc_krenel_syscall_ipc_write%;
+			ac;	llb %0xDE06%; cmp;	jeq %libc_krenel_syscall_fork%;
+			ac;	llb %0xDE07%; cmp;	jeq %libc_krenel_syscall_getpid%;
+			ac;	llb %0xDE08%; cmp;	jeq %libc_krenel_syscall_ownsegment%;
+			ac;	llb %0xDE09%; cmp;	jeq %libc_krenel_syscall_releasesegment%;
+			ac;	llb %0xDE0A%; cmp;	jeq %libc_krenel_syscall_setshutdownprint%;
+			//I don't recognize this syscall. 
+			libc_lproc_krenel_print_krenel;
+			la 'b'; putchar;
+			la 'a'; putchar;
+			la 'd'; putchar;
+			la '\ '; putchar;
+			la 's'; putchar;
+			la 'y'; putchar;
+			la 's'; putchar;
+			la 'c'; putchar;
+			la 'a'; putchar;
+			la 'l'; putchar;
+			la 'l'; putchar;
+			la '\r'; putchar;
+			la '\n'; putchar;interrupt;
+			jim %libc_krenel_cswitch_killtask%;
+
+	:libc_krenel_syscall_getpid:
+			lda %libc_krenel_active_task_index%;//TODO single byte read
+			user_seta;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_ipc_write:
+
+			user_getc; //the machine they want to interact with.
+			lb libc_krenel_max_active_tasks_mask; 
+			and;
+			rx1a;
+
+			//Is this process allowed to write to that process's memory?
+			ldb %libc_krenel_active_task_index%;//TODO single byte read
+			cmp;
+			//lb 2; cmp;
+			gt
+			jeq %libc_krenel_syscall_end%;
+
+
+			user_get0; //The location in memory to write it.
+			cbrx0;
+			user_getb;rx3a; //the byte you want to write.
+
+
+
+			arx1;
+			task_set;
+			arx3;
+			user_farista;	//write it!
+			//Re-set our active task.
+			lda %libc_krenel_active_task_index%;//TODO single byte read
+			task_set;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_kill_pid:
+			//did the user ask us to kill them?
+			user_getb;
+			lb libc_krenel_max_active_tasks_mask; 
+			and;
+			rx3a;//store that number in rx3.
+			ldb %libc_krenel_active_task_index%;
+			cmp; 
+			jeq %libc_krenel_cswitch_killtask%;
+
+			//at this point, RX3 holds the index of the task the user wants to kill.
+			
+			$||
+			//if the task is already dead, we cannot do anything about it.
+			[GOTOIF]{libc_krenel_syscall_end}
+			{
+				lla %libc_krenel_task_isactive_array%; //get array address, 1 byte bools
+				brx3;add;ca; //add the task index.
+				ilda;nota;	//load the value from the array.
+			}
+			$||
+			
+			:libc_krenel_syscall_kill_pid_do_kill:
+			brx3;
+			lla %libc_krenel_task_isactive_array%;	//get address of array
+			add;ca;									//index array using value in b
+			la 0;ista;								//store zero
+
+				//also set it as killed in the CPU.
+			arx3;
+			task_set; task_kill;
+
+			//Re-set our active task.
+			lda %libc_krenel_active_task_index%;//TODO single byte read
+			task_set;
+
+			//decrease number of active tasks by 1.
+			lda %libc_krenel_nactive_tasks%
+			adecr
+			sta %libc_krenel_nactive_tasks%
+			
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_flush_stdout:
+			la '\n'; interrupt; //This also displays the screen.
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_clear_term:
+			la 0xc; interrupt;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_pumpevents:
+			la 1; interrupt;
+
+			llb %0xffFF%; cmp; jeq %libc_krenel_shutdown%; //	handle quit.
+			user_seta;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_read_gamer_buttons:
+			la 2; interrupt;
+			user_seta;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_get_av_user:
+			la 0x17; interrupt;
+			user_seta;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_set_av_user:
+			//active task index has PID 0 being the first usermode process,
+			//but the interrupt treats PID 0 as the kernel.
+			lda %libc_krenel_active_task_index%;//TODO single byte read
+			aincr;
+			la 7; interrupt;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_audio_play:
+			//Step 1: Check audio owner.
+			la 0x17; interrupt; ba; 
+			lda %libc_krenel_active_task_index%;//TODO single byte read
+			aincr;
+			cmp;
+			jne %libc_krenel_syscall_ret0_failure%;
+			//Play audio!
+			la 3; interrupt;
+			jim %libc_krenel_syscall_end%;	
+	:libc_krenel_syscall_audio_kill:
+			//Step 1: Check audio owner.
+			la 0x17; interrupt; ba; 
+			lda %libc_krenel_active_task_index%;//TODO single byte read
+			aincr;
+			cmp;
+			jne %libc_krenel_syscall_ret0_failure%;
+			//Kill Audio!
+			la 4; interrupt;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_fgcolor:
+			//Step 1: Check audio owner.
+			la 0x17; interrupt; ba; 
+			lda %libc_krenel_active_task_index%; //TODO single byte read
+			aincr;
+			cmp;
+			jne %libc_krenel_syscall_ret0_failure%;
+			//set fg color
+			user_getb; ba;
+			la 5; interrupt;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_palette_set:
+			//Step 1: Check audio owner.
+			la 0x17; interrupt; ba; 
+			lda %libc_krenel_active_task_index%; //TODO single byte read
+			aincr;
+			cmp;
+			jne %libc_krenel_syscall_ret0_failure%;
+			//set fg color
+			user_getb; ba;
+			user_get0;
+			la 8; interrupt;
+			jim %libc_krenel_syscall_end%
+	:libc_krenel_syscall_audio_memcpy:
+			//Step 1: Check audio owner.
+			la 0x17; interrupt; ba; 
+			lda %libc_krenel_active_task_index%; //TODO single byte read
+			aincr;
+			cmp;
+			jne %libc_krenel_syscall_ret0_failure%;
+			//Request memcpy!
+			user_getb; ba;
+			user_getc; ca;
+			lla %0x400%; interrupt;
+			jim %libc_krenel_syscall_end%
+	:libc_krenel_syscall_fillrect:
+			//Step 1: Check audio owner.
+			la 0x17; interrupt; ba; 
+			lda %libc_krenel_active_task_index%; //TODO single byte read
+			aincr;
+			cmp;
+			jne %libc_krenel_syscall_ret0_failure%;
+			//Request memcpy!
+			user_get3; rx3_0;
+			user_get2; rx2_0;
+			user_get1; rx1_0;
+			user_get0;
+			user_getb; ba;
+			//Perform interrupt!
+			lla %0x500%; interrupt;
+			jim %libc_krenel_syscall_end%;
+
+	:libc_krenel_syscall_videomemcpy:
+			//Step 1: Check audio owner.
+			la 0x17; interrupt; ba; 
+			lda %libc_krenel_active_task_index%; //TODO single byte read
+			aincr;
+			cmp;
+			jne %libc_krenel_syscall_ret0_failure%;
+			//Request memcpy!
+			user_get2; rx2_0;
+			user_get1; rx1_0;
+			user_get0;
+			//Perform interrupt!
+			lla %0x500%; interrupt;
+			//it has no return value, continue on.
+			jim %libc_krenel_syscall_end%;
+	libc_krenel_syscall_videogetw:
+			lla %0x502%; interrupt; user_seta;
+			jim %libc_krenel_syscall_end%;
+	libc_krenel_syscall_videogeth:
+			lla %0x503%; interrupt; user_seta;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_releasesegment:
+			//Do we already own the segment? If not, then, don't unlock it.
+			lda %libc_krenel_active_task_index%; //TODO single byte read
+			ldb %libc_krenel_owns_segment_index%;
+			cmp;
+			jne %libc_krenel_syscall_ret0_failure%; 
+			
+			//We own the segment. Unlock it.
+			la 0; sta  %libc_krenel_segment_lock%;
+			la 1; user_seta;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_ownsegment:
+			//Do we already own the segment? If so, lock it.
+			lda %libc_krenel_active_task_index%; //TODO single byte read
+			ldb %libc_krenel_owns_segment_index%;
+			cmp;
+			jeq %libc_krenel_syscall_ownsegment_already_own_pleaselock%
+			
+			//is the segment locked?
+			lda %libc_krenel_segment_lock%;
+			lb 1; cmp;
+			jeq %libc_krenel_syscall_ret0_failure%;
+
+			//We can own the segment!
+			lda %libc_krenel_active_task_index%; //TODO single byte read
+			sta  %libc_krenel_owns_segment_index%;
+			libc_lproc_krenel_configure_segment;
+			//this falls through...
+	:libc_krenel_syscall_ownsegment_already_own_pleaselock:
+			la 1; sta  %libc_krenel_segment_lock%;
+			la 1; user_seta; //success!
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_ret0_failure:
+			la 0; 
+			user_seta;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_disk_write:
+			//Write a single sector (256 byte page) to disk.
+			//RX0: Destination on disk.
+			//B: source page.
+			
+			//Load user page
+			libc_lproc_krenel_load_user_page;
+			user_get0; lrx1 %/libc_krenel_max_disk_mask%; rxand;
+			llb %libc_krenel_diskio_page%; 
+			lla %0xFF11%; //Syscall to write 256 bytes to disk.
+			interrupt;
+			user_seta; //Inform the user if the disk write succeeded.
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_disk_read:
+			//read a single sector from disk.
+			//RX0: source sector in disk. Not aligned!
+			//B: destination memory page in user memory.
+			user_get0; lrx1 %/libc_krenel_max_disk_mask%; rxand;
+			llb %libc_krenel_diskio_page%;
+			lla %0xFF10%; //Disk Read magic number.
+			interrupt;
+			user_seta; //Inform the user if the disk read succeeded.
+			//We now have to actually *copy* that stuff over to user memory.
+			user_getb; ca;
+			lla %libc_krenel_diskio_page%;
+			user_farpagest;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_exec:
+			user_getb;			//The region;
+			lb 8; lsh;			//times 256.
+			rx0a;				//put it in RX0.
+			rx3_0; 
+			lrx1 %/0x100%;rxadd;
+			rx1_0;
+			rx0_3;
+
+			//Copy memory by page.
+			libc_krenel_syscall_exec_copymem_looptop:
+				arx0;
+				lb 255; and;
+				llb %~libc_krenel_exec_region%,0;		//Copied to the exec region.
+				add;
+				crx0;		//Destination page.
+				user_farpagel; //USER farpagel
+				rxincr;rxcmp;nota; //if(++rx0 < rx1)
+				jeq %libc_krenel_syscall_exec_copymem_looptop%;
+
+			//The memory is copied. We must now find a free PID.
+			lrx1 %/libc_krenel_max_active_tasks%; 
+			lb 0; rx0b; //iterate over all taskids
+			libc_krenel_syscall_exec_findfreepid_looptop:
+				brx0;//get taskid from rx0
+				lla %libc_krenel_task_isactive_array%; //get address if isactive array
+				add;ca; //get address of index, store into c
+				ilda; //load using c
+				jne %libc_krenel_syscall_exec_found_that_pid%;
+				rxincr;rxcmp;
+				jeq %libc_krenel_syscall_exec_failure%;
+				jim %libc_krenel_syscall_exec_findfreepid_looptop%;
+			
+			libc_krenel_syscall_exec_found_that_pid:
+				//First, tell our previous user that we succeeded.
+				la 1;user_seta;
+				//quickly increase the number of active tasks.
+				lda %libc_krenel_nactive_tasks%
+				aincr	//increment! we have another task!
+				sta %libc_krenel_nactive_tasks%
+				la 0; stla  %libc_krenel_task_nreturns%;//Reset the number of returns for our old task. We are about to switch task...
+				//the new PID is in RX0.
+				arx0;task_set;
+				sta  %libc_krenel_active_task_index%; //TODO single byte write
+
+				//Mark it as running.
+				llb %libc_krenel_task_isactive_array%;
+				add;ca;
+				la 1; ista;
+
+				//Create a bootloader. Fork is the one that doesn't need a bootloader.
+				lb 0; cb; la 2; farista; //code for "la"
+				lb 1; la %~libc_krenel_exec_region%; farista; //the new process boots directly into the exec region.
+				lb 2; la 0x44; farista; //0x44 is lfarpc
+				push %10%; libc_lproc_krenel_configure_segment; pop %10%;
+				lcall %libc_krenel_calc_sic%
+				emulate; //This copies the entire address space of the kernel into the new process.
+			//restore stack integrity. Note that we did not need to store it during the exec call,
+			//because when Krenel was called, this memory was already beneath the stack pointer,
+			//and we stored it already.
+				
+				ldrx0 %libc_krenel_stack_data_store%
+				farstrx0 %&0%
+				//We have switched task, as commanded. A holds our return value. CHECK IT...
+				alpush;
+				alpop;
+				jim %libc_krenel_cswitch_looptop%;
+			libc_krenel_syscall_exec_failure:
+				la 0;user_seta;
+				jim %libc_krenel_syscall_end%;
+
+	:libc_krenel_syscall_fork:
+			//TODO: change fork so that it does not require creating a bootloader, but rather
+			//behaves somewhat like a *nix system- it continues execution on the new thread
+			//where the caller left off.
+			lrx1 %/libc_krenel_max_active_tasks%; 
+			lb 0; rx0b;
+			libc_krenel_syscall_fork_findfreepid_looptop:
+				arx0;									//pid we are testing
+				llb %libc_krenel_task_isactive_array%;	//get address of array
+				add;ca;									//get index of element
+				ilda;									//load byte element of array
+				nota;
+				jeq %libc_krenel_syscall_fork_found_that_pid%;
+				rxincr;rxcmp;
+				jeq %libc_krenel_syscall_fork_failure%;
+				jim %libc_krenel_syscall_fork_findfreepid_looptop%;
+			
+			libc_krenel_syscall_fork_found_that_pid:
+				//First, tell our previous user that we succeeded.
+				la 1; user_seta
+
+				//inmcrease nactive tasks
+				lda %libc_krenel_nactive_tasks%
+				aincr
+				sta %libc_krenel_nactive_tasks%
+			
+				la 0; stla  %libc_krenel_task_nreturns%;	//Reset the number of returns.
+				//The new PID is in RX0.
+				arx0;apush;
+				//the new PID is now on the stack.
+				lb 0; rx0b;
+				lrx1 %/0x10000%; //The end of memory, as a page.
+				libc_krenel_syscall_fork_copymem_looptop:
+					lla %libc_krenel_diskio_page%;;
+					crx0;
+					user_farpagel;
+					apop;apush;task_set; //Into new user memory.
+					lla %libc_krenel_diskio_page%;
+					user_farpagest;
+					lda %libc_krenel_active_task_index%; //TODO single byte read, lda
+					task_set;
+					rxincr;rxcmp;lt;
+					jeq %libc_krenel_syscall_fork_copymem_looptop%; //if(++rx0 < rx1) jump
+
+				apop; task_set; 
+				sta %libc_krenel_active_task_index%;//switched to the new task.//TODO single byte write
+				
+
+				//Mark the new PID as running.
+				llb %libc_krenel_task_isactive_array%;	//get address of isactive array
+				add;ca;									//get address of element in isactive array
+				la 1;ista;								//store 1 to element in isactive array
+				task_kill;								//kill the current task
+				//Unlike exec, we do not need to create a bootloader. Fork assumes that the userland code already did that.
+				push %10%; libc_lproc_krenel_configure_segment; pop %10%;
+				lcall %libc_krenel_calc_sic%
+				priv_drop;
+				//We have switched task and returned, as commanded. A holds our return value. CHECK IT...
+				jim %libc_krenel_cswitch_looptop%;
+			libc_krenel_syscall_fork_failure:
+				la 0;user_seta;
+				jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_setshutdownprint:
+			user_getb;
+			sta %libc_krenel_do_shutdown_print%;
+			jim %libc_krenel_syscall_end%;
+	:libc_krenel_syscall_end:
+			//Syscalls are expensive.
+			llda %libc_krenel_task_nreturns%;
+			lb 3; add;
+			stla  %libc_krenel_task_nreturns%;
+			jim %libc_krenel_preempt%;
+	libc_krenel_getchar:
+		getchar;user_seta;
+		//Syscalls are expensive.
+		llda %libc_krenel_task_nreturns%;
+		lb 3; add;
+		stla  %libc_krenel_task_nreturns%;
+		jim %libc_krenel_preempt%;
+	libc_krenel_putchar:
+		user_geta;putchar;
+
+		llda %libc_krenel_task_nreturns%;
+		lb 3; add;
+		stla  %libc_krenel_task_nreturns%;
+		
+		jim %libc_krenel_preempt%;
+	libc_krenel_tried_interrupt:
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~KRENEL INTERRUPT PASSTHROUGHS~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		//User code calling an interrupt!
+		user_geta;ca;	lb '\n'; cmp; jeq %libc_krenel_syscall_flush_stdout%;
+		ac; 			lb 0xc; cmp; jeq %libc_krenel_syscall_clear_term%;
+		ac;				lb 1; cmp; jeq %libc_krenel_syscall_pumpevents%;
+		//BAD INTERRUPT
+		la '\r'; putchar; la '\n'; putchar;
+		libc_lproc_krenel_print_krenel;
+		la 'i'; putchar;
+		la 'l'; putchar;
+		la 'l'; putchar;
+		la '\ '; putchar;
+		la 'i'; putchar;
+		la 'n'; putchar;
+		la 't'; putchar;
+		la '\r'; putchar;
+		la '\n'; putchar;interrupt;
+		jim %libc_krenel_cswitch_killtask%;
+	libc_krenel_preempt:
+		//Check for need of a task switch.
+		llda %libc_krenel_task_nreturns%;
+		aincr;
+		stla  %libc_krenel_task_nreturns%;
+		//if greater than or equal to...
+		llb %libc_krenel_max_returns%; 
+			cmp; 
+			gte;
+		jeq %libc_krenel_try_select_task%;
+		//We already configured the segment. We just preempted a running task, which we should return to.
+		//push %10%; libc_lproc_krenel_configure_segment; pop %10%;
+		lcall %libc_krenel_calc_sic%
+		priv_drop;
+		
+		jim %libc_krenel_cswitch_looptop%;
+	libc_krenel_cswitch_killtask:
+		//Kill the current task.
+			task_kill
+		//decrease the number of active tasks.
+			lda %libc_krenel_nactive_tasks%
+			adecr
+			sta %libc_krenel_nactive_tasks%
+		//Set active task to be in the "dead" state- 0.
+			lda %libc_krenel_active_task_index%;
+			//lb libc_krenel_max_active_tasks_mask; and; //Unnecessary check
+			//the active task index is in A.
+			llb %libc_krenel_task_isactive_array%;	//get address of isactive array
+			add;ca;									//get address of element in isactive array
+			la 0; ista;								//store 0 in element of isactive array
+		//Does this dead task own the segment? If not, then, don't unlock it.
+			lda %libc_krenel_active_task_index%;
+			ldb %libc_krenel_owns_segment_index%;
+			cmp; 
+			jne %libc_krenel_try_select_task%; 
+		//It owns the segment. Unlock it.
+			la 0; sta  %libc_krenel_segment_lock%;
+	libc_krenel_try_select_task:
+		task_ric; //Reset the current task's instruction counter.
+		la 1; interrupt; //Check for quit signal. Also pumps the keyboard...
+
+		
+		llb %0xffFF%; cmp; jeq %libc_krenel_shutdown%; //quit if we should!
+		
+		lb 0; rx2b;	//RX2: the number of things we have tried.
+		la 0; stla  %libc_krenel_task_nreturns%;	//Reset the number of returns for our old task.
+		lb libc_krenel_max_active_tasks_mask; rx1b;
+		lda %libc_krenel_active_task_index%;
+		rx3a;//RX3: the iterator
+	libc_krenel_try_select_task_loop:
+		//Loop from where we are, and around again. If we find a task to execute... execute it!
+			rx0_3;
+			rxincr;
+			rxand; //we're using the mask.
+			rx3_0;
+
+			arx3;									//get our iterator.
+			llb %libc_krenel_task_isactive_array%;	//get the address of the isactive array
+			add;ca;									//get the address of the element in the isactive array
+			ilda;									//load using that address into a
+		//Did we find it? 1 is already the value for "equals" so we dont need to compare it.
+			jeq %libc_krenel_found_pid_to_run%;
+		//We didn't! Should we quit?
+			rx0_2;rxincr;rx2_0;
+		//It will always be at LEAST 1 after this... We have to compare with the *mask* which is one less.
+			rxdecr;
+			rxcmp;
+			//lb 2;cmp;
+			gt;
+			jeq %libc_krenel_shutdown%; //shutdown if we are greater than the mask.
+		//No. Continue to search for new tasks.
+			jim %libc_krenel_try_select_task_loop%;
+	libc_krenel_found_pid_to_run:
+		//Set it as the active PID.
+		arx3;
+		task_set; 
+		sta  %libc_krenel_active_task_index%;
+		libc_lproc_krenel_configure_segment;
+		lcall %libc_krenel_calc_sic%
+		priv_drop;
+		//We have a return argument to respond to!
+		jim %libc_krenel_cswitch_looptop%;
+	libc_krenel_shutdown:
+		
+		lda %libc_krenel_do_shutdown_print%;
+		jne %libc_krenel_noprint_shutdown%;
+		
+		libc_lproc_krenel_print_krenel;
+		la 's'; putchar;
+		la 'h'; putchar;
+		la 'u'; putchar;
+		la 't'; putchar;
+		la 'd'; putchar;
+		la 'o'; putchar;
+		la 'w'; putchar;
+		la 'n'; putchar;
+		la '\n'; interrupt;
+
+	libc_krenel_noprint_shutdown:
+		//Shut down the system.
+		//Loop through all the stuff. Close everything!
+		//Set all tasks to be zero. task_kill everything.
+
+
+		
+		lb 0;rx0b; 
+		lb libc_krenel_max_active_tasks; rx1b;
+		libc_krenel_zero_tasks_shutdown_looptop:
+			arx0;task_kill;
+			
+			llb %libc_krenel_task_isactive_array%;	//get address of isactive array.
+			add;ca;									//generate address of element
+			la 0; ista;								//set to zero
+
+			
+			rxincr;rxcmp;nota; //nota is just "Is a equal to zero?"
+			jeq %libc_krenel_zero_tasks_shutdown_looptop%;
+	
+		lla %0xE001%; interrupt; //make IO blocking again.
+		farret;//asm_print; //I want information!
+
+
+//If you directly boot the libc, this is what you boot into.
+
+:libc_booter:
+	//restore the nops at zero.
+	la 0x1E;
+	sta %0%;
+	sta %1%;
+	sta %2%;
+	sta %3%;
+	la 0; rx0a;
+	lla %0x100%; rx1a;
+	llb %~LIBC_REGION%, 0;
+	libc_booter_copy_loop:
+		arx0;  add; ca;
+		arx0;
+		farpagest;
+		rxincr;
+		rxcmp;
+		nota;
+		jeq %libc_booter_copy_loop%;
+	//Indicate that booting succeded.
+	astp;popa; //Clear the stack pointer.
+
+	//NOTE TO USER: REPLACE THE FOLLOWING WITH YOUR ENTRY POINT!!!!
+	lrx0 %/libc_COMMAND_COM%;		//Launch our shell, command.com
+	proc_krenel;					//Krenel is told what to boot into.
+	halt;
+:LIBC_KRENEL_END:
+..export"LIBC_KRENEL_END"
+..include"command_com.hasm"
+
