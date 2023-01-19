@@ -151,6 +151,9 @@ k 248:k 249:k 250:k 251:k 252:k 253:k 254:k 255:default:goto G_HALT;}
 
 int DONT_WANT_TO_INLINE_THIS e()
 {
+
+
+/*REGISTER CONFIGURATION!*/
 #ifdef SISA_DEBUGGER
 	u program_counter_region=0;
 	U a=0,b=0,c=0,program_counter=0,stack_pointer=0;
@@ -173,16 +176,18 @@ int DONT_WANT_TO_INLINE_THIS e()
 	register u *M=M_SAVER[0];
 	u current_task=1;
 #endif
+/*registers that are not actually registers:*/
 	sisa_regfile REG_SAVER[1 + SISA_MAX_TASKS] = {0};
 	UU seg_access_mask = (SEGMENT_PAGES-1);
 	UU seg_access_offset = 0;
+
 #ifndef PREEMPT_TIMER
 #define PREEMPT_TIMER 0xF0000000
 #endif
-#define EXTREME_HIGH_INSN_COST 0x10000
-#define VERY_HIGH_INSN_COST 0x700
-#define HIGHER_INSN_COST 0x400
-#define HIGH_INSN_COST 0x50
+
+
+#define EXTREME_HIGH_INSN_COST 0x100
+#define HIGH_INSN_COST 0x30
 #define MED_INSN_COST 0x10
 
 #ifndef NO_PREEMPT
@@ -325,6 +330,8 @@ const void* const goto_table[256] = {
 
 R=0;
 di();
+
+
 #ifdef SISA_DEBUGGER
 debugger_hook(&a,&b,&c,&stack_pointer,&program_counter,&program_counter_region,&RX0,&RX1,&RX2,&RX3,&EMULATE_DEPTH,M);
 #endif
@@ -358,7 +365,7 @@ G_ILDB:b=M[GET_EFF_C()]D
 G_CAB:c=(a<<8)|(b&255)D
 G_AB:a=b;D
 G_BA:b=a;D
-G_ALC:a=c&0xff;D
+G_ALC:a=c&255;D
 G_AHC:a=(c>>8);D
 G_CBA:c=(b<<8)|(a&255)D
 G_LLA:a=CONSUME_TWO_BYTES;D
@@ -472,8 +479,8 @@ D
 G_RET:
 {
 	U tmp;
-	stack_pointer--;tmp =M[stack_pointer];
-	stack_pointer--;tmp|=(((UU)M[stack_pointer])<<8);
+	stack_pointer--;tmp  =		M[stack_pointer];
+	stack_pointer--;tmp |=(((UU)M[stack_pointer])<<8);
 	SET_PC(tmp);
 }
 D
@@ -541,6 +548,7 @@ G_USER_FARILDA:if(EMULATE_DEPTH){R=15; goto G_HALT;}a=M_SAVER[current_task][ (((
 G_USER_SETA:if(EMULATE_DEPTH){R=15; goto G_HALT;}REG_SAVER[current_task].a=a;D
 G_TASK_SET: /*task_set*/
 	if(EMULATE_DEPTH){R=15; goto G_HALT;}
+	/*Notice that current_task internally is an index into M_SAVER...*/
 	current_task = a%SISA_MAX_TASKS + 1;
 D
 G_TASK_KILL:	/*G_TASK_KILL*/
@@ -762,7 +770,8 @@ D
 
 G_SEG_LD:
 #ifndef NO_SEGMENT
-	if(seg_access_offset==SEGMENT_PAGES){R=5;goto G_HALT;}
+	if(seg_access_offset==SEGMENT_PAGES)
+		{R=5;goto G_HALT;}
 	{
 		STASH_REGS;
 		memcpy(
@@ -787,8 +796,9 @@ G_SEG_LD:
 
 G_SEG_ST:
 #ifndef NO_SEGMENT
-	if(seg_access_offset==SEGMENT_PAGES){R=5;goto G_HALT;}
-	else
+	if(seg_access_offset==SEGMENT_PAGES)
+		{R=5;goto G_HALT;}
+
 	{
 		STASH_REGS;
 		memcpy(
@@ -893,7 +903,7 @@ G_AA3:
 D
 G_AA4:RX0=Z_READ4BYTES(RX1)D
 G_AA5:RX0=Z_READ4BYTES(RX0)D
-G_AA6:SET_PCR(RX0>>16);SET_PC(RX0 & 0xffFF);D
+G_AA6:SET_PCR(RX0>>16);SET_PC(RX0);D
 G_AA7:write_4bytes(RX0,RX1)D
 G_AA8:write_4bytes(RX1,RX0)D
 G_AA9:c=(RX0>>16);b=RX0;D
@@ -902,12 +912,12 @@ G_AA10:c=(RX0>>16);a=RX0;D
 G_AA11:{SUU SRX0, SRX1;
 		SRX0 = RX0;
 		SRX1 = RX1;
-	if(SRX1!=0)RX0=(SRX0/SRX1)&0xffFFffFF;else{R=3;goto G_HALT;}
+	if(SRX1!=0)RX0=(SRX0/SRX1);else{R=3;goto G_HALT;}
 }D
 G_AA12:{SUU SRX0, SRX1;
 		SRX0 = RX0;
 		SRX1 = RX1;
-	if(SRX1!=0)RX0=(SRX0%SRX1)&0xffFFffFF;else{R=4;goto G_HALT;}
+	if(SRX1!=0)RX0=(SRX0%SRX1);else{R=4;goto G_HALT;}
 }D
 #else
 	/*
@@ -918,31 +928,35 @@ G_AA12:{SUU SRX0, SRX1;
 #endif
 	G_AA13:{UU flight;
 		flight = CONSUME_THREE_BYTES;
-		RX0=(((UU)M[flight])<<24) | 
-					(((UU)M[(flight+1)&0xffFFff])<<16) |
-					(((UU)M[(flight+2)&0xffFFff])<<8) |
-					(((UU)M[(flight+3)&0xffFFff]));
+		RX0=	(((UU)M[flight])<<24) | 
+				(((UU)M[(flight+1)&0xffFFff])<<16) |
+				(((UU)M[(flight+2)&0xffFFff])<<8) |
+				(((UU)M[(flight+3)&0xffFFff]))
+		;
 	}D
 	G_AA14:{UU flight;
 		flight = CONSUME_THREE_BYTES;
-		RX1=(((UU)M[flight])<<24) | 
-							(((UU)M[(flight+1)&0xffFFff])<<16) |
-							(((UU)M[(flight+2)&0xffFFff])<<8) |
-							(((UU)M[(flight+3)&0xffFFff]));
+		RX1=	(((UU)M[flight])<<24) | 
+				(((UU)M[(flight+1)&0xffFFff])<<16) |
+				(((UU)M[(flight+2)&0xffFFff])<<8) |
+				(((UU)M[(flight+3)&0xffFFff]))
+		;
 	}D
 	G_AA15:{UU flight;
 		flight = CONSUME_THREE_BYTES;
-		RX2=(((UU)M[flight])<<24) | 
-							(((UU)M[(flight+1)&0xffFFff])<<16) |
-							(((UU)M[(flight+2)&0xffFFff])<<8) |
-							(((UU)M[(flight+3)&0xffFFff]));
+		RX2=	(((UU)M[flight])<<24) | 
+				(((UU)M[(flight+1)&0xffFFff])<<16) |
+				(((UU)M[(flight+2)&0xffFFff])<<8) |
+				(((UU)M[(flight+3)&0xffFFff]))
+		;
 	}D
 	G_AA16:{UU flight;
 		flight = CONSUME_THREE_BYTES;
-		RX3=(((UU)M[flight])<<24) | 
-							(((UU)M[(flight+1)&0xffFFff])<<16) |
-							(((UU)M[(flight+2)&0xffFFff])<<8) |
-							(((UU)M[(flight+3)&0xffFFff]));
+		RX3=	(((UU)M[flight])<<24) | 
+				(((UU)M[(flight+1)&0xffFFff])<<16) |
+				(((UU)M[(flight+2)&0xffFFff])<<8) |
+				(((UU)M[(flight+3)&0xffFFff]))
+		;
 	}D
 	G_AA17:{UU flight;
 		flight = CONSUME_THREE_BYTES;
