@@ -317,7 +317,7 @@ static char* scope_get_ident_name(UU i){
 	
 */
 
-UU scope_decl_parsetype(char** targ, char require_space){
+UU scope_decl_parsetype(char** targ){
 	UU basetype = 0;
 	UU ptrlevel = 0;
 	UU arraysz = 0;
@@ -370,13 +370,6 @@ UU scope_decl_parsetype(char** targ, char require_space){
 		(*targ) += loc_endbrack; 
 		(*targ)++;
 	}
-	if(require_space)
-	if(!isspace( (*targ)[0] ) ){
-			puts(syntax_fail_pref);
-			puts("Type declaration for variables requires space.Line:");
-			puts(line_copy);
-			exit(1);
-		}
 	return basetype | 4 | (ptrlevel * 8) | (arraysz*512);
 }
 
@@ -388,7 +381,7 @@ static void scope_decl_parse_vardecl(
 	UU t;
 	UU i;
 	UU declsz;
-	t = scope_decl_parsetype(targ,1);
+	t = scope_decl_parsetype(targ);
 	while(isspace((*targ)[0])) (*targ)++;
 	/*Must be at beginning of identifier.*/
 	if(!isalpha(*targ[0]) && (*targ[0] != '_')){
