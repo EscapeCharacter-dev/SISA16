@@ -388,7 +388,8 @@ bytes 1;
 			
 			jim %libc_krenel_syscall_end%;
 	:libc_krenel_syscall_flush_stdout:
-			la '\n'; interrupt; //This also displays the screen.
+			la '\n'; 
+			interrupt; //This also displays the screen.
 			jim %libc_krenel_syscall_end%;
 	:libc_krenel_syscall_clear_term:
 			la 0xc; interrupt;

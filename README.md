@@ -57,6 +57,101 @@ Platforms planned to be tested:
 
 * Public domain. 
 
+## How fast is it?
+______________________________
+
+I wrote a simple program called "rxincrmark" which calculates how long it takes in milliseconds
+for a busy loop to make 2.1 billion iterations.
+
+it's similar to the Linux kernel's idea of "Bogomips".
+
+I wrote this program both in sisa16 assembly language, to run on top of krenel,
+and on WSL2 on my main development machine.
+
+Running native code with the optimizer on, on my skylake machine, 
+I ran the test 6 times and got these numbers:
+
+
+
+```
+	rxincrmark.c, gcc, -O3, volatile variable:
+	5712
+	5795
+	5861
+	5660
+	5640
+	5645
+```
+
+the average number of milliseconds for the native code was 5718.8333333333
+
+Using a user-mode program written in SISA16 which runs on KRENEL,
+
+I got these results:
+
+```
+	rxincrmark.asm,
+	sisa16 userland code
+	
+	13088
+	12868
+	12820
+	13144
+	13007
+	13111
+```
+
+the average number of milliseconds for the sisa16 code on the same machine was 13006.33333333
+
+13006.3333 / 5718.8333 is 2.274.
+
+So the emulator, running a user-mode program, in WSL2, is about 1/2.27 the speed of the native code.
+
+Or slightly less than half the speed of native code.
+
+For reference, here is how other emulators/interpreters hold up given the same test:
+
+_________________________________________________________
+Lua 5.4 (granularity is seconds, getting milliseconds was too complicated):
+
+```
+	rxincrmark.lua
+	
+	103000
+	 94000
+	 96000
+	106000
+```
+
+Average of 99750 milliseconds.
+
+99750/5718.83333 = 17.44, or 1/17.44 the sped
+
+_________________________________________________________
+Python 3.9.2
+
+(This took a long time...)
+
+```
+	rxincrmark.py
+	
+	149111.831
+	147932.991
+	173889.139
+	153685.489
+```
+Average of 156154.8625 ms
+
+156154.8625/5718.83333 = 27.305
+
+about 1/27.3 of the speed of native.
+
+
+
+
+
+
+
 Build Statuses:
 
 gek169/Simple_ISA:

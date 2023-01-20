@@ -59,13 +59,13 @@ $|
 $|
 		ac
 		la '\r'; putchar;
-		la '\n'; interrupt;
-		la %~wait_time%;
-		rx0a;sleep_wait;
+		la '\n'; syscall;
+		la %~wait_time%
+		rx0a
+		sleep_wait
 
-		//alpush; proc_wait; alpop;
 		jim %asciifun_looptop%;
-		:ascii_spinny:
-		..asciz:-\|/
-		.ascii_spinny_len:4
+ascii_spinny:
+	..asciz:-\|/
+	.ascii_spinny_len:4
 asm_end_restriction;
