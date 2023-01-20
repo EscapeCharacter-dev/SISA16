@@ -81,7 +81,6 @@ static void dcl(){}
 	IMPLEMENT YOUR CLOCK HERE!!!!
 	a must be milliseconds
 	b must be seconds
-	c is presumed to be some raw measurement of the clock- it can be whatever
 */
 #define clock_ins(){\
 	size_t q;\
@@ -92,7 +91,6 @@ static void dcl(){}
 	}\
 	a=((q)/(CLOCKS_PER_SEC/1000));\
 	b=q/(CLOCKS_PER_SEC);\
-	c=q;\
 }
 
 

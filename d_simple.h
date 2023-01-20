@@ -39,7 +39,6 @@ static void dcl(){return;}
 	}\
 	a=((q)/(CLOCKS_PER_SEC/1000));\
 	b=q/(CLOCKS_PER_SEC);\
-	c=q;\
 }
 
 

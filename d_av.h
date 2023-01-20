@@ -184,7 +184,6 @@ static void DONT_WANT_TO_INLINE_THIS dcl(){
 	}\
 	a=((q)/(CLOCKS_PER_SEC/1000));\
 	b=q/(CLOCKS_PER_SEC);\
-	c=q;\
 }
 
 static void pollevents(){
