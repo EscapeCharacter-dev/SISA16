@@ -51,7 +51,13 @@ int main(int rc,char**rv){
 		exit(1);
 	}
 #endif
-	if(rc<2){
+	if(rc>1)
+	if(
+		rv[1][0] == '-' &&
+		rv[1][1] == 'v' &&
+		rv[1][2] == '\0'
+	)
+	{
 			puts("SISA-16 Standalone Emulator written by D[MHS]W for the Public Domain");
 			puts("This program is Free Software that respects your freedom, you may trade it as you wish.");
 			puts("\n\nSISA-16 Macro Assembler, Disassembler, Debugger, and Emulator in Pure Glorious ANSI/ISO C90, Version " SISA_VERSION);
