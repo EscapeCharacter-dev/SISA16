@@ -1260,13 +1260,13 @@ G_AA12:{SUU SRX0, SRX1;
 	}D
 
 	/*General purpose registers extension*/
-	G_LGP:{
+	G_LGP:{ /*5 bytes of argument, 1 byte regid + 4 bytes of data to fill the register*/
 		UU val;
 		u regid;
 		regid = CONSUME_BYTE;
 		regid = regid & 63;
 		val = CONSUME_FOUR_BYTES;
-		gp[regid] = val;	
+		gp[regid] = val;
 	}D
 
 	G_FARLDGP:{

@@ -428,7 +428,7 @@ static unsigned char insns_numargs[256] = {
 		3, /*farsta*/
 		3, /*farstb*/
 		/*gp extension*/
-		5,
+		5, /*lgp takes a regid and then the 4 bytes of value*/
 		4,
 		4,
 		/*ild/st through rx0*/
