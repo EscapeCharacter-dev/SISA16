@@ -317,7 +317,7 @@ static char* scope_get_ident_name(UU i){
 	
 */
 
-UU scope_decl_parsetype(char** targ){
+UU scope_decl_parsetype(char** targ, char require_space){
 	UU basetype = 0;
 	UU ptrlevel = 0;
 	UU arraysz = 0;
@@ -330,7 +330,8 @@ UU scope_decl_parsetype(char** targ){
 
 	/*fallthrough! uh oh!*/
 	puts(syntax_fail_pref);
-	puts("Scope syntax with invalid basetype");
+	puts("Scope syntax with invalid basetype.Line:");
+	puts(line_copy);
 	exit(1);
 	
 	next1:;
@@ -349,24 +350,34 @@ UU scope_decl_parsetype(char** targ){
 		arraysz = matou(*targ);
 		if(arraysz == 0){
 			puts(syntax_fail_pref);
-			puts("Cannot declare zero-length array.");
+			puts("Cannot declare zero-length array.Line:");
+			puts(line_copy);
 			exit(1);
 		}
 		if(arraysz > 65536){
 			puts(syntax_fail_pref);
-			puts("Cannot declare array with more than 65536 elements.");
+			puts("Cannot declare array with more than 65536 elements.Line:");
+			puts(line_copy);
 			exit(1);
 		}
 		loc_endbrack = strfind(*targ, /*[*/"]");
 		if(loc_endbrack == -1){
 			puts(syntax_fail_pref);
-			puts("Array declaration lacking end bracket.");
+			puts("Array declaration lacking end bracket.Line:");
+			puts(line_copy);
 			exit(1);
 		}
 		(*targ) += loc_endbrack; 
 		(*targ)++;
 	}
-	
+	if(require_space)
+	if(*targ != ' ' &&
+		*targ != '\t'){
+			puts(syntax_fail_pref);
+			puts("Type declaration for variables requires space.Line:");
+			puts(line_copy);
+			exit(1);
+		}
 	return basetype | 4 | (ptrlevel * 8) | (arraysz*512);
 }
 
@@ -378,7 +389,7 @@ static void scope_decl_parse_vardecl(
 	UU t;
 	UU i;
 	UU declsz;
-	t = scope_decl_parsetype(targ);
+	t = scope_decl_parsetype(targ,1);
 	while(isspace((*targ)[0])) (*targ)++;
 	/*Must be at beginning of identifier.*/
 	if(!isalpha(*targ[0]) && (*targ[0] != '_')){
