@@ -78,14 +78,14 @@ $}
 	//test gp registers
 	lrx0 %/0%;
 	lgp 63, %/0xABCDEF98%;
-	rx0gp 63;
+	rx0gp 127;
 	lrx1 %/0xFF00FF00%
 	rxand
 	rx3_0;
 	
 	gprx3 63;
 	lrx0 %/0%;
-	gpmov 17, 63;
+	gpmov 17, 127;
 	rx0gp 17;
 	proc_print32hex
 	
