@@ -341,6 +341,7 @@ const void* const goto_table[256] = {
 #endif
 
 R=0;
+memset(gp, 0, 4*64);
 di();
 
 
