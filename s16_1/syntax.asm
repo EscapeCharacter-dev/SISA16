@@ -77,7 +77,13 @@ $}
 
 	//test gp registers
 	lrx0 %/0%;
-	lgp 17, %/0xABCDEF98%;
+	lgp 63, %/0xABCDEF98%;
+	rx0gp 63;
+	lrx1 %/0xFF00FF00%
+	rxand
+	gprx0 63;
+
+	gpmov 17, 63;
 	rx0gp 17;
 	proc_print32hex
 	
