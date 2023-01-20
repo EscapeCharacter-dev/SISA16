@@ -81,8 +81,10 @@ $}
 	rx0gp 63;
 	lrx1 %/0xFF00FF00%
 	rxand
-	gprx0 63;
-
+	rx3_0;
+	
+	gprx3 63;
+	lrx0 %/0%;
 	gpmov 17, 63;
 	rx0gp 17;
 	proc_print32hex
