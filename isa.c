@@ -4,6 +4,8 @@
 	Textmode emulator for SISA16.
 */
 static FILE* F;
+const char* default_fname = "sisa16.dsk";
+
 
 int main(int rc,char**rv){
 	UU i , j=~(UU)0;
@@ -246,7 +248,14 @@ int main(int rc,char**rv){
 			puts("The C compiler does not expose itself to be one of the ones recognized by this program. Please tell me on Github what you used.");
 			return 0;
 	}
-	F=fopen(rv[1],"rb");
+
+
+	/*TODO*/
+	if(rc > 1)
+		F=fopen(rv[1],"rb");
+	else
+		F=fopen(default_fname,"rb");
+	
 	if(!F){
 		puts("SISA16 emulator cannot open this file.");
 		exit(1);
