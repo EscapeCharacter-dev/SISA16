@@ -73,10 +73,21 @@ fill 256,0;
 
 .innerfor:[for]{lrx0 %/0%; rx0push; }{rx0pop;rx0push;lrx1 %/20%;rxcmp;lt;}{la ' ';putchar;rx0pop;rxincr;rx0push;};rx0pop;
 
-
-	[for]{lrx0 %/0%; rx0push;}\
-		{rx0pop;rx0push;lrx1 %/3000%;rxcmp;lb 0;cmp;}\
-		{innerfor;innerfor;la 'q';putchar;rx0pop;rxincr;rx0push;}
+$|
+	[for]{
+			lrx0 %/0%; rx0push;
+		}{
+			rx0pop;rx0push;lrx1 %/3000%;rxcmp;lb 0;cmp;
+		}{
+			innerfor;
+			innerfor;
+			la 'q';
+			putchar;
+			rx0pop;
+			rxincr;
+			rx0push;
+		}
+$|
 	rx0pop;
 	innerfor;
 	astp;
