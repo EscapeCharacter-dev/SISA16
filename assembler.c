@@ -371,8 +371,7 @@ UU scope_decl_parsetype(char** targ, char require_space){
 		(*targ)++;
 	}
 	if(require_space)
-	if(*targ != ' ' &&
-		*targ != '\t'){
+	if(!isspace( (*targ)[0] ) ){
 			puts(syntax_fail_pref);
 			puts("Type declaration for variables requires space.Line:");
 			puts(line_copy);
