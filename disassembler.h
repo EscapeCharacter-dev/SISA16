@@ -66,22 +66,22 @@ static int disassembler(char* fname,
 		if(opcode >= n_insns){
 			if(enable_dis_comments)
 #ifndef SISA_DEBUGGER
-				printf("%-12s 0x%x                ;//0x%06lx  : Illegal Opcode (E_ILLEGAL_OPCODE)\n","bytes", (unsigned int)opcode, i-1);
+				printf("%-12s 0x%x                     ;//0x%06lx  : Illegal Opcode (E_ILLEGAL_OPCODE)\n","bytes", (unsigned int)opcode, i-1);
 #else
-				printf("%-12s 0x%x                ;//0x%06lx  : Illegal Opcode (E_ILLEGAL_OPCODE)\n\r","bytes", (unsigned int)opcode, i-1);
+				printf("%-12s 0x%x                     ;//0x%06lx  : Illegal Opcode (E_ILLEGAL_OPCODE)\n\r","bytes", (unsigned int)opcode, i-1);
 #endif
 			else
 #ifndef SISA_DEBUGGER
-				printf("%-12s 0x%x                ;\n","bytes", (unsigned int)opcode);
+				printf("%-12s 0x%x                     ;\n","bytes", (unsigned int)opcode);
 #else
-				printf("%-12s 0x%x                ;\n\r","bytes", (unsigned int)opcode);
+				printf("%-12s 0x%x                     ;\n\r","bytes", (unsigned int)opcode);
 #endif
 			continue;
 		}else{
 			arg_i = 0;
 			bad_flag = 0;
 			unfinished_flag = 0;
-			required_spaces = 20;
+			required_spaces = 25;
 			opcode_i = i-1;
 			short_interpretation = 0;
 			byte_interpretation = 0;
