@@ -69,9 +69,8 @@ int perform_inplace_repl( /*returns whether or not it actually did a replacement
 
 static char rut_append_to_me = 0; /*boolean value.*/
 static char single_logical_line_mode = 0;
-static const char* begin_single_logical_line_mode = "$||";
-static const char* end_single_logical_line_mode = "$||";
-static const unsigned long len_end_single_logical_line_mode = 3;
+static const char* end_single_logical_line_mode = "$|";
+static const unsigned long len_end_single_logical_line_mode = 2;
 static char* read_line_from_file(FILE* f, unsigned long* lenout, char terminator){
 	unsigned char c;
 	unsigned long blen;
@@ -3726,7 +3725,7 @@ int main(int argc, char** argv){
 			} else if(strprefix("asm_label\\", metaproc)){
 				do_label(metaproc);
 
-			} else if(strprefix("$||", metaproc)){
+			} else if(strprefix("$|", metaproc)){
 				/*do nothing, this is a leftover...*/
 			} else if(strprefix("#", metaproc)){
 				/*do nothing.*/

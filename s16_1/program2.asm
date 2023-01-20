@@ -32,19 +32,19 @@ ${	(byte f)\//what a nice byte
 	uint[500] q;\//what a nice array
 	uint[20] q2;//an even nicer array
 
-$||
+$|
 	nop;$<f;nop;
 	arx0;putchar;
 	la '\n'; putchar;
 	$return;//expands to farret
-$||
+$|
 
 $}
 
 ..decl_farproc:add_two_numbers
 ${(int a, int b, int[1] secret_array) byte before; int[500] test; int beyond;
 
-$||
+$|
 
 #notice how these comments are just fine?
 
@@ -61,7 +61,7 @@ $||
 	$<test;
 	
 	$>b;	$return
-$||
+$|
 
 $}
 
@@ -116,10 +116,17 @@ fill 256,0;
 	lrx0 %/request%; proc_prints; la '\n'; putchar;
 
 	//[GOTOIF]{label}{condition code}
-	[GOTOIF]{end_of_program}\
-	{lrx0 %/buf1%; proc_gets;\
-	 lrx0 %/buf1%; lrx1 %/secret_code%; proc_strcmp;\
-	 lb 0; cmp;}
+$|
+	[GOTOIF]{end_of_program}
+	{
+		lrx0 %/buf1%; 
+		proc_gets;
+	 	lrx0 %/buf1%; 
+	 	lrx1 %/secret_code%; 
+	 	proc_strcmp;
+	 	nota;
+	}
+$|
 	
 	halt;
 

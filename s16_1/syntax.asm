@@ -15,15 +15,15 @@
 ${int a; int b; int c; int i;
 
 	$>i;
-	$||
+	$|
 		[if]{$<i;lrx1 %/2%;rxcmp;lte;}{
 			lrx0 %/1%; $return;
 		}
-	$||
+	$|
 
 	la 1; rx0a; $>a; $>b;
 	//while loop to compute fibonacci numbers.
-	$||
+	$|
 		[while]{
 			$<i;
 			lrx1 %/2%;
@@ -43,7 +43,7 @@ ${int a; int b; int c; int i;
 			//i--;
 			$<i;rxdecr;$>i;
 		}
-	$||;
+	$|;
 	
 	$<c;
 	$return;

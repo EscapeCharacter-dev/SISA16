@@ -20,7 +20,7 @@
 	//fcall %&does_not_exist%
 	
 	
-$||
+$|
 	[for]//main loop
 	{
 		//we store our count value here...
@@ -44,7 +44,7 @@ $||
 		rxdecr;
 		rx0push;
 	}
-$||
+$|
 	rx0pop;
 		rx0_2;farret;
 	

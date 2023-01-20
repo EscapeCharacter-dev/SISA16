@@ -357,7 +357,7 @@ bytes 1;
 
 			//at this point, RX3 holds the index of the task the user wants to kill.
 			
-			$||
+	$|
 			//if the task is already dead, we cannot do anything about it.
 			[GOTOIF]{libc_krenel_syscall_end}
 			{
@@ -365,7 +365,7 @@ bytes 1;
 				brx3;add;ca; //add the task index.
 				ilda;nota;	//load the value from the array.
 			}
-			$||
+	$|
 			
 			:libc_krenel_syscall_kill_pid_do_kill:
 			brx3;

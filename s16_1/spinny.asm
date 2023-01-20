@@ -48,7 +48,7 @@ la 0;alpush;
 		lb %~ascii_spinny%;
 		add; ca; ilda;
 		ca
-		$||
+$|
 			[for]{
 				lrx0 %/0%;lrx1 %/50%;
 			}{rxcmp;lt;}{
@@ -56,7 +56,7 @@ la 0;alpush;
 				putchar;
 				rxincr;
 			}
-		$||
+$|
 		ac
 		la '\r'; putchar;
 		la '\n'; interrupt;
