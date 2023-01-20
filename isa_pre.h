@@ -45,6 +45,7 @@ User mode is pre-empted.
 
 
 typedef struct {
+	UU gp[64];
 	UU RX0,RX1,RX2,RX3;
 #ifndef NO_PREEMPT
 	UU instruction_counter;
@@ -56,7 +57,8 @@ static u M_SAVER[1+SISA_MAX_TASKS][0x1000000] = {0};
 static u SEGMENT[SEGMENT_PAGES * 256];
 #define SAVE_REGISTER(XX, d) REG_SAVER[d].XX = XX;
 #define LOAD_REGISTER(XX, d) XX = REG_SAVER[d].XX;
-
+#define SAVE_GP(d) {memcpy(REG_SAVER[d].gp,  gp, 64*4);}
+#define LOAD_GP(d) {memcpy(gp, REG_SAVER[d]. gp, 64*4);}
 #ifdef ATTRIB_NOINLINE
 #define DONT_WANT_TO_INLINE_THIS __attribute__ ((noinline))
 #else

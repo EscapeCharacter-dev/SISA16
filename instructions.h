@@ -1,4 +1,4 @@
-static char* insns[242] = {
+static char* insns[256] = {
 	"halt", /*0*/
 	"lda",
 	"la",
@@ -265,9 +265,27 @@ static char* insns[242] = {
 	"farlda",
 	"farldb",
 	"farsta",
-	"farstb"
+	"farstb",
+	/*general purpose register extension*/
+	"lgp",
+	"farldgp",
+	"farstgp",
+	"farildgp",
+	"faristgp",
+
+	"rx0gp",
+	"rx1gp",
+	"rx2gp",
+	"rx3gp",
+
+	"gprx0",
+	"gprx1",
+	"gprx2",
+	"gprx3",
+
+	"gpmov"
 };
-static unsigned char insns_numargs[242] = {
+static unsigned char insns_numargs[256] = {
 	0,/*halt*/
 	2,1,2,1, /*load and load constant comboes, lda, la, ldb, lb*/
 	2, /*load constant into C*/
@@ -409,8 +427,20 @@ static unsigned char insns_numargs[242] = {
 		3, /*farldb*/
 		3, /*farsta*/
 		3, /*farstb*/
+		/*gp extension*/
+		5,
+		4,
+		4,
+		/*ild/st through rx0*/
+		1,
+		1,
+		/*transfers into/out of RX registers*/
+		1,1,1,1,
+		1,1,1,1,
+		/*gpmove*/
+		2
 };
-static char* insn_repl[242] = {
+static char* insn_repl[256] = {
 	"bytes0;", 
 	/*The direct load-and-store operations have args.*/
 	"bytes1,",
@@ -691,6 +721,21 @@ static char* insn_repl[242] = {
 		"bytes238,", /*farlda*/
 		"bytes239,", /*farldb*/
 		"bytes240,", /*farsta*/
-		"bytes241," /*farstb*/
+		"bytes241,", /*farstb*/
+		/*lgp*/
+		"bytes242,",
+		"bytes243,",
+		"bytes244,",
+		"bytes245,",
+		"bytes246,",
+		"bytes247,",
+		"bytes248,",
+		"bytes249,",
+		"bytes250,",
+		"bytes251,",
+		"bytes252,",
+		"bytes253,",
+		"bytes254,",
+		"bytes255,"
 };
 static const unsigned int n_insns = 242;

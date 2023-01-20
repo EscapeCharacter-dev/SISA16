@@ -145,13 +145,24 @@ k 231:goto G_FCALL;232:goto G_LCALL;k 233:goto G_JNE;k 234:goto G_JEQ;k 235:goto
 k 236:goto G_TASK_SIC;k 237:goto G_USER_FARJMP;\
 k 238:goto G_FARLDA;k 239:goto FARLDB;\
 k 240:goto FARSTA;k 241:goto FARSTB;\
-k 242:k 243:k 244:k 245:k 246:k 247:\
-k 248:k 249:k 250:k 251:k 252:k 253:k 254:k 255:default:goto G_HALT;}
+k 242:goto G_LGP;k 243:goto G_FARLDGP;\
+k 244:goto G_FARSTGP;\
+k 245:goto G_FARILDGP;\
+k 246:goto G_FARISTGP;\
+k 247:goto G_RX0GP;\
+k 248:goto G_RX1GP;\
+k 249:goto G_RX2GP;\
+k 250:goto G_RX3GP;\
+k 251:goto G_GPRX0;\
+k 252:goto G_GPRX1;\
+k 253:goto G_GPRX2;\
+k 254:goto G_GPRX3;\
+k 255:goto G_GPMOV;}
 #endif
 
 int DONT_WANT_TO_INLINE_THIS e()
 {
-
+	UU gp[64]; /*General purpose registers extension*/
 
 /*REGISTER CONFIGURATION!*/
 #ifdef SISA_DEBUGGER
@@ -312,21 +323,20 @@ const void* const goto_table[256] = {
 &&G_FARLDB,
 &&G_FARSTA,
 &&G_FARSTB,
-&&G_HALT,
-&&G_HALT,
-&&G_HALT,
-&&G_HALT,
-&&G_HALT,
-&&G_HALT,
-&&G_HALT,
-&&G_HALT,
-&&G_HALT,
-&&G_HALT,
-&&G_HALT,
-&&G_HALT,
-&&G_HALT,
-
-&&G_HALT
+&&G_LGP,
+&&G_FARLDGP,
+&&G_FARSTGP,
+&&G_FARILDGP,
+&&G_FARISTGP,
+&&G_RX0GP,
+&&G_RX1GP,
+&&G_RX2GP,
+&&G_RX3GP,
+&&G_GPRX0,
+&&G_GPRX1,
+&&G_GPRX2,
+&&G_GPRX3,
+&&G_GPMOV
 };
 #endif
 
@@ -514,6 +524,7 @@ G_FARISTB:write_byte(b,((((UU)c)<<16)|((UU)a)))D
 G_PRIV_DROP: /**/
 {
 		if(EMULATE_DEPTH > 0) {R=15; goto G_HALT;}
+		SAVE_GP(0);
 		SAVE_REGISTER(a, 0);
 		SAVE_REGISTER(b, 0);
 		SAVE_REGISTER(c, 0);
@@ -526,6 +537,7 @@ G_PRIV_DROP: /**/
 		SAVE_REGISTER(RX3, 0);
 		EMULATE_DEPTH = 1;M=M_SAVER[current_task];
 		/*Load on up again! We're continuing where we left off!*/
+		LOAD_GP(current_task);
 		LOAD_REGISTER(a, current_task);
 		LOAD_REGISTER(b, current_task);
 		LOAD_REGISTER(c, current_task);
@@ -1057,6 +1069,7 @@ G_AA12:{SUU SRX0, SRX1;
 			memcpy(M_SAVER[current_task], M_SAVER[0], 0x1000000);
 			UNSTASH_REGS;
 		}
+		SAVE_GP(0);
 		SAVE_REGISTER(a, 0);
 		SAVE_REGISTER(b, 0);
 		SAVE_REGISTER(c, 0);
@@ -1077,6 +1090,7 @@ G_AA12:{SUU SRX0, SRX1;
 #endif
 		RX0=0;RX1=0;RX2=0;RX3=0;
 		a=0;b=0;c=0;
+		memset(gp,0,4*64);
 	}D
 
 	G_RXICMP:
@@ -1245,12 +1259,116 @@ G_AA12:{SUU SRX0, SRX1;
 		write_byte(b, CONSUME_THREE_BYTES);
 	}D
 
+	/*General purpose registers extension*/
+	G_LGP:{
+		UU val;
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		val = CONSUME_FOUR_BYTES;
+		gp[regid] = val;	
+	}D
 
+	G_FARLDGP:{
+		UU val;
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		val = CONSUME_THREE_BYTES;
+		gp[regid] = Z_READ4BYTES(val);
+	}D
+	G_FARSTGP:{
+		UU val;
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		write_4bytes(gp[regid],
+			CONSUME_THREE_BYTES
+		);
+	}D
 
+	G_FARILDGP:{
+		UU val;
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		val = RX0;
+		gp[regid] = Z_READ4BYTES(val);
+	}D
+	G_FARISTGP:{
+		UU val;
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		write_4bytes(
+			gp[regid],
+			RX0
+		);
+	}D
+	G_RX0GP:{
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		RX0 = gp[regid];	
+	}D
+	G_RX1GP:{
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		RX1 = gp[regid];	
+	}D
+	G_RX2GP:{
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		RX2 = gp[regid];	
+	}D
+	G_RX3GP:{
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		RX3 = gp[regid];	
+	}D
+
+	G_GPRX0:{
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		gp[regid] = RX0;	
+	}D
+	G_GPRX1:{
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		gp[regid] = RX1;	
+	}D
+	G_GPRX2:{
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		gp[regid] = RX2;	
+	}D
+	G_GPRX3:{
+		u regid;
+		regid = CONSUME_BYTE;
+		regid = regid & 63;
+		gp[regid] = RX3;	
+	}D
+	G_GPMOV:{
+		u regid1, regid2;
+		regid1 = CONSUME_BYTE;
+		regid2 = CONSUME_BYTE;
+		regid1 = regid1 & 63;
+		regid2 = regid2 & 63;
+		gp[regid1] = gp[regid2];
+	}D
+	
+	
 	G_HALT:
 	if(EMULATE_DEPTH == 0){
 		dcl();return 0;
 	} else {
+		SAVE_GP(current_task);
 		SAVE_REGISTER(a, current_task);
 		SAVE_REGISTER(b, current_task);
 		SAVE_REGISTER(c, current_task);
@@ -1267,6 +1385,7 @@ G_AA12:{SUU SRX0, SRX1;
 		M=M_SAVER[0];
 		EMULATE_DEPTH=0;
 		a=R;R=0;
+		LOAD_GP(0);
 		LOAD_REGISTER(b, 0);
 		LOAD_REGISTER(c, 0);
 		LOAD_REGISTER(program_counter, 0);
