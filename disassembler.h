@@ -197,9 +197,9 @@ static int disassembler(char* fname,
 #endif
 				}else if(streq(insns[opcode], "clock")){
 #ifndef SISA_DEBUGGER
-					puts(" get sys time: A=ms, B=s, C=clock()");
+					puts(" get sys time: A=ms, B=s");
 #else
-					printf(" get sys time: A=ms, B=s, C=clock()\r\n");
+					printf(" get sys time: A=ms, B=s\r\n");
 #endif
 				}else if(streq(insns[opcode], "emulate")){
 #ifndef SISA_DEBUGGER
@@ -221,9 +221,9 @@ static int disassembler(char* fname,
 #endif				
 				}else if(strprefix("task_",insns[opcode])){
 #ifndef SISA_DEBUGGER
-					puts(" Manipulate task cpu buffer.");
+					puts(" Manipulate task regfile.");
 #else
-					printf(" Manipulate task cpu buffer.\r\n");
+					printf(" Manipulate task regfile.\r\n");
 #endif
 				}else if(streq(insns[opcode], "interrupt")){
 #ifndef SISA_DEBUGGER
@@ -253,9 +253,9 @@ static int disassembler(char* fname,
 #endif
 					}else{
 #ifndef SISA_DEBUGGER
-						puts(" ?: arg is jump target");
+						puts(" ?: arg is address");
 #else
-						printf(" ?: arg is jump target\r\n");
+						printf(" ?: arg is address\r\n");
 #endif
 					}
 				}else if(streq(insns[opcode], "crx0")
@@ -263,27 +263,27 @@ static int disassembler(char* fname,
 						||streq(insns[opcode], "crx2")
 						||streq(insns[opcode], "crx3")){
 #ifndef SISA_DEBUGGER
-					puts(" ?: Computed Jump through RX register.");
+					puts(" ?: Addressing through RX reg.");
 #else
-					printf(" ?: Computed Jump through RX register.\r\n");
+					printf(" ?: Addressing through RX reg.\r\n");
 #endif
 				}else if(streq(insns[opcode], "ca")){
 #ifndef SISA_DEBUGGER			
-					puts(" ?\?: Computed Jump through register A");
+					puts(" ?\?: Addressing through reg A");
 #else
-					printf(" ?\?: Computed Jump through register A\r\n");
+					printf(" ?\?: Addressing through reg A\r\n");
 #endif
 				}else if(streq(insns[opcode], "cb")){
 #ifndef SISA_DEBUGGER
-					puts(" ?\?: Computed Jump through register B");
+					puts(" ?\?: Addressing through reg B");
 #else
-					printf(" ?\?: Computed Jump through register B\r\n");
+					printf(" ?\?: Addressing through reg B\r\n");
 #endif
 				}else if(streq(insns[opcode], "astp")){
 #ifndef SISA_DEBUGGER
-					puts(" Stack manip, maybe retrieving function arguments?");
+					puts(" Stack manip, maybe retrieving fn arguments?");
 #else
-					printf(" Stack manip, maybe retrieving function arguments?\r\n");
+					printf(" Stack manip, maybe retrieving fn arguments?\r\n");
 #endif
 				}else if(streq(insns[opcode], "lcall")){
 #ifndef SISA_DEBUGGER
@@ -305,15 +305,15 @@ static int disassembler(char* fname,
 #endif
 				}else if(streq(insns[opcode], "farcall")){
 #ifndef SISA_DEBUGGER
-					puts(" Procedure Call through A and C");
+					puts(" Procedure Call through pcr:A and pc:C");
 #else
-					printf(" Procedure Call through A and C\r\n");
+					printf(" Procedure Call through pcr:A and pc:C\r\n");
 #endif
 				}else if(streq(insns[opcode], "lfarpc")){
 #ifndef SISA_DEBUGGER
-					printf(" Region Jump to %u\n", (unsigned)byte_interpretation);
+					printf(" Region Jump to region %u\n", (unsigned)byte_interpretation);
 #else
-					printf(" Region Jump to %u\r\n", (unsigned)byte_interpretation);
+					printf(" Region Jump to region %u\r\n", (unsigned)byte_interpretation);
 #endif
 				}else if(streq(insns[opcode], "farjmprx0")){
 #ifndef SISA_DEBUGGER
@@ -366,6 +366,92 @@ static int disassembler(char* fname,
 					puts(" ?: Loop top is next insn");
 #else
 					printf(" ?: Loop top is next insn\r\n");
+#endif
+				}else if(streq(insns[opcode], "lgp")){
+#ifndef SISA_DEBUGGER
+					printf(" imm. value into GP reg");
+#else
+					printf(" imm. value into GP reg\r\n");
+#endif
+				}else if(streq("farldgp", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" load from far address into GP reg");
+#else
+					puts(" load from far address into GP reg\r\n");
+#endif
+				}else if(streq("farstgp", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" store into far address from GP reg");
+#else
+					puts(" store into far address from GP reg\r\n");
+#endif
+				}else if(streq("farildgp", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" Indirect load GP reg through RX0");
+#else
+					puts(" Indirect load GP reg through RX0\r\n");
+#endif
+				}else if(streq("faristgp", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" Indirect store GP reg through RX0");
+#else
+					puts(" Indirect store GP reg through RX0\r\n");
+#endif
+
+				}else if(streq("gprx0", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" Move RX0 to gp reg");
+#else
+					puts(" Move RX0 to gp reg\r\n");
+#endif
+				}else if(streq("gprx1", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" Move RX1 to gp reg");
+#else
+					puts(" Move RX1 to gp reg\r\n");
+#endif
+				}else if(streq("gprx2", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" Move RX2 to gp reg");
+#else
+					puts(" Move RX3 to gp reg\r\n");
+#endif
+				}else if(streq("gprx3", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" Move RX3 to gp reg");
+#else
+					puts(" Move RX3 to gp reg\r\n");
+#endif
+
+				}else if(streq("rx0gp", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" Move gp reg to RX0");
+#else
+					puts(" Move gp reg to RX0\r\n");
+#endif
+				}else if(streq("rx1gp", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" Move gp reg to RX1");
+#else
+					puts(" Move gp reg to RX1\r\n");
+#endif
+				}else if(streq("rx2gp", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" Move gp reg to RX2");
+#else
+					puts(" Move gp reg to RX2\r\n");
+#endif
+				}else if(streq("rx3gp", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" Move gp reg to RX3");
+#else
+					puts(" Move gp reg to RX3\r\n");
+#endif
+				}else if(streq("rx3gp", insns[opcode])){
+#ifndef SISA_DEBUGGER
+					puts(" Move gp reg to another");
+#else
+					puts(" Move gp reg to another");
 #endif
 				}else {
 #ifndef SISA_DEBUGGER
