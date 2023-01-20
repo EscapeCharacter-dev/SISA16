@@ -5,7 +5,7 @@ INSTALL_DIR     = /usr/bin
 MAN_INSTALL_DIR = /usr/share/man/man1
 
 GIT_HASH = $(shell git rev-parse > /dev/null 2>&1 && git rev-parse --short HEAD || echo no)
-OPTLEVEL    = -Os -s -march=native -DSISA_GIT_HASH=\"$(GIT_HASH)\" 
+OPTLEVEL    = -O3 -s -march=native -DSISA_GIT_HASH=\"$(GIT_HASH)\" 
 #" dont remove this it fixes syntax highlighting in my editor
 
 #-DUSE_COMPUTED_GOTO
