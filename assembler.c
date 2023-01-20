@@ -610,8 +610,8 @@ static UU handle_dollar_left(unsigned long loc){
 	}
 	
 	/*4 byte pointer*/
-	if(type_get_ptrlevel(scope_vartypes[i])) goto gen_grab_fourbyte_var;
 	if(type_get_arraysz(scope_vartypes[i])) goto index_array;
+	if(type_get_ptrlevel(scope_vartypes[i])) goto gen_grab_fourbyte_var;
 
 	
 	if(type_get_basetype(scope_vartypes[i])  == 0) goto gen_grab_fourbyte_var;
@@ -713,8 +713,8 @@ static UU handle_dollar_write(unsigned long loc){
 	}
 	
 	/*4 byte pointer*/
-	if(type_get_ptrlevel(scope_vartypes[i])) goto gen_put_fourbyte_var;
 	if(type_get_arraysz(scope_vartypes[i])) goto index_array;
+	if(type_get_ptrlevel(scope_vartypes[i])) goto gen_put_fourbyte_var;
 
 	
 	if(type_get_basetype(scope_vartypes[i])  == 0) goto gen_put_fourbyte_var;
