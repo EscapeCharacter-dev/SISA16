@@ -800,7 +800,33 @@ farsta: store byte a to immediate far memory location (F0)
 
 farstb: store byte b to immediate far memory location (F1)
 
-The last 14 opcodes are halt duplicates, free for expansion (1 byte)
+lgp: load immediate into general purpose register (F2) (regid, 4 bytes of value)
+
+farldgp: far load general purpose register from address (F3) (regid, 3 bytes of address)
+
+farstgp: far store general purpose register to address (F4) (regid, 3 bytes of address)
+
+farildgp: far indirect load general purpose register through RX0 (F5) (regid)
+
+faristgp: far indirect store general purpose register through RX1 (F6) (regid)
+
+rx0gp: set rx0 to value from gp register (F7) (regid)
+
+rx1gp: set rx1 to value from gp register (F8)
+
+rx2gp: (F9)
+
+rx3gp: (FA)
+
+gprx0: set general purpose register to value from RX0 (FB) (regid)
+
+gprx1: (FC)
+
+gprx2: (FD)
+
+gprx3: (FE)
+
+gpmov: set general purpose register to value from other general purpose register (FF) (regid_dest, regid_src)
 
 .TP
 .B Comments
