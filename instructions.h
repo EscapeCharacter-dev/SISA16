@@ -738,4 +738,4 @@ static char* insn_repl[256] = {
 		"bytes254,",
 		"bytes255,"
 };
-static const unsigned int n_insns = 242;
+static const unsigned int n_insns = 256;

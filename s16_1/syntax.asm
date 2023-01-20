@@ -74,5 +74,12 @@ $}
 		proc_prints;
 		la '\r'; putchar;la '\n'; putchar; interrupt;
 	rx0pop;
+
+	//test gp registers
+	lrx0 %/0%;
+	lgp 17, %/0xABCDEF98%;
+	rx0gp 17;
+	proc_print32hex
+	
 	halt;
 
