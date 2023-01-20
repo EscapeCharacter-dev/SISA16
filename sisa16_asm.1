@@ -812,21 +812,25 @@ faristgp: far indirect store general purpose register through RX1 (F6) (regid)
 
 rx0gp: set rx0 to value from gp register (F7) (regid)
 
-rx1gp: set rx1 to value from gp register (F8)
+rx1gp: set rx1 to value from gp register (F8) (regid)
 
-rx2gp: (F9)
+rx2gp: same but for RX2 (F9)
 
-rx3gp: (FA)
+rx3gp: same but for RX3 (FA)
 
 gprx0: set general purpose register to value from RX0 (FB) (regid)
 
-gprx1: (FC)
+gprx1: same but for RX1 (FC)
 
-gprx2: (FD)
+gprx2: same but for RX2 (FD)
 
-gprx3: (FE)
+gprx3: same but for RX3 (FE)
 
 gpmov: set general purpose register to value from other general purpose register (FF) (regid_dest, regid_src)
+
+Every single possible opcode value is already taken, however some may be of very little use for your software, so consider adding or removing instructions
+
+according to your need.
 
 .TP
 .B Comments
