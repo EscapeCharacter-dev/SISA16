@@ -51,7 +51,7 @@ static unsigned char stdin_buf[(SCREEN_WIDTH_CHARS * SCREEN_HEIGHT_CHARS)] = {0}
 unsigned short stdin_bufptr = 0;
 
 static void stdin_buf_push_char(unsigned char c){
-	if(stdin_bufptr > sizeof(stdin_buf)) return;
+	if(stdin_bufptr > sizeof(stdin_buf)) return; /*discard it.*/
 	stdin_buf[stdin_bufptr++] = c;
 }
 
@@ -92,7 +92,10 @@ static UU vga_palette[256] = {
 static void DONT_WANT_TO_INLINE_THIS sdl_audio_callback(void *udata, Uint8 *stream, int len){
 	SDL_memset(stream, 0, len);
 	if(audio_left == 0){return;}
-	len = (len < audio_left) ? len : audio_left;
+	if(len >= audio_left){
+		len = audio_left;
+	}
+	/*len = (len < audio_left) ? len : audio_left;*/
 	
 	SDL_MixAudio(stream, audiomemory + (0x100000 - audio_left), len, SDL_MIX_MAXVOLUME);
 	audio_left -= len;
@@ -434,6 +437,10 @@ static unsigned short DONT_WANT_TO_INLINE_THIS interrupt(unsigned short a,
 	}
 	if(a==0xE001){
 		return 0;
+	}
+	if(a==0xE002){
+		stdin_bufptr = 0;
+		return 1;
 	}
 	if(a == 0xffFF){ /*Perform a memory dump.*/
 		unsigned long i,j;
