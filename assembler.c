@@ -222,10 +222,8 @@ static void DONT_WANT_TO_INLINE_THIS fputbyte(unsigned char b){
 			exit(1);
 		}
 	}
-	if(!quit_after_macros){
-			if(npasses == 1)
-				M_SAVER[0][outputcounter]=b;
-	}
+
+	M_SAVER[0][outputcounter]=b;
 	outputcounter++; 
 	if(outputcounter > nbytes_written)
 		nbytes_written = outputcounter;
@@ -3905,11 +3903,9 @@ int main(int argc, char** argv){
 		TODO: do file writing here.
 	*/
 	if(infile)	{fclose(infile);infile = NULL;}
-	if(!quit_after_macros && !run_sisa16){
+	if(!run_sisa16 && !quit_after_macros){
 		ofile=fopen(outfilename, "wb");
-	}
-	if(!run_sisa16){
-		if(!ofile && !quit_after_macros){
+		if(!ofile){
 			puts(general_fail_pref);
 			puts("UNABLE TO OPEN OUTPUT FILE:");
 			puts(outfilename);
