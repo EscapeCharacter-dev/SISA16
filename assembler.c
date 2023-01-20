@@ -179,6 +179,7 @@ static char DONT_WANT_TO_INLINE_THIS int_checker(char* proc){
 
 
 static unsigned long outputcounter = 0;
+static unsigned long nbytes_written = 0;
 static unsigned long nmacros = 5; /*0,1,2,3,4*/
 static char quit_after_macros = 0;
 static char debugging = 0;
@@ -188,18 +189,24 @@ static unsigned long linesize = 0;
 static unsigned long region_restriction = 0;
 static char region_restriction_mode = 0; /*0 = off, 1 = block, 2 = region*/
 
-static void DONT_WANT_TO_INLINE_THIS fputbyte(unsigned char b, FILE* f){
+static void DONT_WANT_TO_INLINE_THIS fputbyte(unsigned char b){
+
+	/*
+		This was changed so that it doesn't use FILE* at all.
+	*/
+
+	/*
 	if(!run_sisa16 && !quit_after_macros)
 		if((unsigned long)ftell(f) != outputcounter){
-			/*seek to the end*/
 			fseek(f,0,SEEK_END);
-			if((unsigned long)ftell(f) > outputcounter) /*The file is already larger than needed.*/
+			if((unsigned long)ftell(f) > outputcounter) 
 				fseek(f,outputcounter,SEEK_SET); 
-			else /*Need to expand file. Fill with 0's until we reach the output counter.*/
+			else 
 				while((unsigned long)ftell(f)!=outputcounter)fputc(0, f);
 		}
+	*/
 
-	if(region_restriction_mode == 1){ 
+	if(region_restriction_mode == 1){
 		/*Yes, 0xFFFF is correct for PAGE (256 byte) restriction. See the right bit shift? */
 		if (((outputcounter>>8) & 0xFFFF)  != region_restriction){
 			puts(compil_fail_pref);
@@ -216,17 +223,18 @@ static void DONT_WANT_TO_INLINE_THIS fputbyte(unsigned char b, FILE* f){
 		}
 	}
 	if(!quit_after_macros){
-		if(!run_sisa16){
-			if(npasses == 1)
-				fputc(b, f);
-		} else {
 			if(npasses == 1)
 				M_SAVER[0][outputcounter]=b;
-		}
 	}
-	outputcounter++; outputcounter&=0xffFFff;
+	outputcounter++; 
+	if(outputcounter > nbytes_written)
+		nbytes_written = outputcounter;
+	outputcounter&=0xffFFff;
 }
-static void putshort(unsigned short sh, FILE* f){fputbyte(sh/256, f);fputbyte(sh, f);}
+static void putshort(unsigned short sh){
+	fputbyte(sh/256);
+	fputbyte(sh);
+}
 #define ASM_MAX_INCLUDE_LEVEL 20
 static FILE* fstack[ASM_MAX_INCLUDE_LEVEL];
 #include "disassembler.h"
@@ -1339,8 +1347,8 @@ static void handle_exclamation_mark_string_literal(){
 	if(printlines && npasses == 1)puts(line);
 	if(!quit_after_macros)
 		for(i = 1; i < strlen(line);i++)
-			fputbyte(line[i], ofile);
-	if(using_asciz) fputbyte(0, ofile);
+			fputbyte(line[i]);
+	if(using_asciz) fputbyte(0);
 }
 
 static void handle_asm_header(){
@@ -1431,7 +1439,7 @@ static void handle_asm_data_include(){
 		exit(1);
 	}
 	fseek(tmp, 0, SEEK_SET);
-	for(;len>0;len--)fputbyte(fgetc(tmp), ofile);
+	for(;len>0;len--)fputbyte(fgetc(tmp));
 	fclose(tmp);
 	if(printlines && npasses == 1)puts(line);
 }
@@ -2356,7 +2364,7 @@ static void do_bytes(char* metaproc){
 		
 		preval = strtoul(proc,NULL,0);
 		byteval = preval & 255;
-		fputbyte(byteval, ofile);
+		fputbyte(byteval);
 		/*Find the next comma.*/
 		incr = strfind(proc, ",");
 		incrdont = strfind(proc, ";");
@@ -2381,7 +2389,7 @@ static void do_shorts(char* metaproc){
 			exit(1);
 		}
 		shortval = strtoul(proc,NULL,0);
-		putshort(shortval, ofile);
+		putshort(shortval);
 		/*Find the next comma.*/
 		incr = strfind(proc, ",");
 		incrdont = strfind(proc, ";");
@@ -2511,7 +2519,7 @@ static void do_fill(char* metaproc){
 				puts(line_copy);
 			}
 	for(;fillsize>0;fillsize--)
-		fputbyte(fillval, ofile);
+		fputbyte(fillval);
 }
 
 static void do_label(char* metaproc){
@@ -3340,16 +3348,7 @@ int main(int argc, char** argv){
 		exit(1);
 	}
 	ofile = NULL;
-	if(!quit_after_macros && !run_sisa16){
-		ofile=fopen(outfilename, "wb");
-	}
-	if(!run_sisa16)
-		if(!ofile && !quit_after_macros){
-			puts(general_fail_pref);
-			puts("UNABLE TO OPEN OUTPUT FILE:");
-			puts(outfilename);
-			return 1;
-		}
+
 	/*Second pass to allow goto labels*/
 
 
@@ -3902,14 +3901,27 @@ int main(int argc, char** argv){
 	} /*For loop, 2 passes*/
 
 
-	
-	if(!clear_output && !run_sisa16) {
+	/*
+		TODO: do file writing here.
+	*/
+	if(infile)	{fclose(infile);infile = NULL;}
+	if(!quit_after_macros && !run_sisa16){
+		ofile=fopen(outfilename, "wb");
+	}
+	if(!run_sisa16){
+		if(!ofile && !quit_after_macros){
+			puts(general_fail_pref);
+			puts("UNABLE TO OPEN OUTPUT FILE:");
+			puts(outfilename);
+			return 1;
+		}
+		fwrite(M_SAVER+0, 1, nbytes_written, ofile);
+		fflush(ofile);
+		fclose(ofile);ofile = NULL;
 		fputs("<ASM> Successfully assembled ", stdout);
 		fputs(outfilename,stdout);
 		fputs("\n",stdout);
 	}
-	if(ofile) 	{fclose(ofile);ofile = NULL;}
-	if(infile)	{fclose(infile);infile = NULL;}
 
 
 
