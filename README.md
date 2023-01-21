@@ -57,272 +57,6 @@ Platforms planned to be tested:
 
 * Public domain. 
 
-## How fast is it?
-______________________________
-READER'S NOTE: I was not super serious about making sure that nothing else was happening on the computer
-
-while benchmarks were running.
-
-Notably, I was editting this document in my terminal editor, and sometimes looking at chrome.
-
-I did eventually decide though to turn off the music that was playing on youtube.
-______________________________
-
-I wrote a simple program called "rxincrmark" which calculates how long it takes in milliseconds
-for a busy loop to make 2.1 billion iterations.
-
-The repository for that code is [here](https://github.com/gek169/rxincrmark).
-
-(It has been seperated out due to potential licensing issues in the other scripting languages.)
-
-it's similar to the Linux kernel's idea of "Bogomips".
-
-I wrote this program both in sisa16 assembly language, to run on top of krenel,
-and on WSL2 on my main development machine.
-
-Running native code with the optimizer on, on my skylake machine, 
-I ran the test 6 times and got these numbers:
-
-Native C
-_________________
-```
-	rxincrmark.c, gcc, -O3 -march=native, volatile variable:
-	
-	5712
-	5795
-	5861
-	5660
-	5640
-	5645
-```
-
-the average number of milliseconds for the native code was 5718.8333333333
-
-this will serve as a baseline.
-
-Using a user-mode program written in SISA16 which runs on KRENEL,
-
-mimicking the C code having a variable in memory (not in registers)
-
-I got these results:
-
-Sisa16 KRENEL userland:
-___________________
-```
-	rxincrmark.asm,
-	sisa16 userland code, variable is in memory, not in registers
-	
-	47411
-	47284
-	47433
-	47258
-	48435
-	47283
-```
-
-an average of 47517.333333 ms.
-
-47517.3333 / 5718.8333 = 8.3089 
-
-so it runs about 1/8.3 times the speed.
-
-I also decided to run SISA16 without KRENEL to get a more direct comparison of the actual
-
-interpreter's raw performance without the overhead of KRENEL, the operating system I wrote for SISA16.
-
-```
-	rxincrmark_privilieged.asm,
-	assembled into a .dsk image,
-	sisa16 privileged code
-
-	47206
-	47212
-	47212
-	47538
-	47539
-	47433
-```
-
-The results were nearly identical, which is surprising and seems to indicate
-
-that KRENEL's context switches are very lightweight.
-
-Running an Operating System in SISA16 seems to introduce very little overhead! wow!
-
-
-
-For reference, here is how other emulators/interpreters hold up given the same test:
-
-_________________________________________________________
-Lua 5.4 (granularity is seconds, getting milliseconds was too complicated):
-
-```
-	rxincrmark.lua
-	
-	106000
-	103000
-	 91000
-	 93000
-```
-
-Rather than using the average score, I decided to give lua the best chance and use the best score.
-
-91000 / 5718.8333 = 15.912365
-
-so about 1/15.912 times the speed.
-
-_________________________________________________________
-Python 3.9.2
-
-Python is typically mocked and scorned for being incredibly slow, however,
-
-I would guess that this comes from the excess use of overly complex data structures and garbage collecting.
-
-As expected, it was the slowest thing I have tested thus far, and thus I only did three iterations.
-
-```
-	rxincrmark.py
-
-	142055.93286
-	141836.07348 (would round up to 9)
-	144037.05126 (would round up to 7)
-```
-
-141836.07348 / 5718.8333 = 24.801575
-
-so python 3 was about 1/24.8 times the speed.
-
-
-________________________________________________________
-NodeJS
-
-The first time I tried to run the test on nodejs, I got something very strange...
-
-the result was actually around 3.6-3.7 seconds.
-
-I was stunned, but then I thought about it, and realized it was probably
-
-optimizing the local variable "i" that I was using for the loop down to a single register being incremented,
-
-which I happen to know from previous (invalid) versions of sisa16, takes about 11-14 seconds.
-
-In order to do a "real" comparison, like the volatile variable in C or SISA16, I needed
-
-to use a global variable.
-
-NodeJS ran faster than SISA16 userland, most likely because it is a JIT-compiled language.
-
-Sisa16 is running KRENEL and Node doesn't have to do much of anything.
-
-```
-	node rxincrmark.js
-
-	45573
-	45157
-	45602
-	44895
-```
-
-the best result was 44895,
-
-44895 / 5718.8333 = 7.85
-
-so about 1/7.85 the speed of the native C program.
-
-Sisa16_emu does not use JIT, yet, even with KRENEL running, it is comparable to
-
-a JIT javascript implementation.
-
-A 'proper' implementation of SISA16 with JIT acceleration would be awesome...
-
-__________________________________
-QuickJS
-
-Fabrice Bellard made a javascript engine, and I'm a big fan of his work, so I decided to use the same
-
-javascript program in his interpreter.
-
-I was hopeful that his interpreter might be faster than lua, but sadly, it is not (in this specific instance)
-
-These took a long time, so I only did 3.
-
-```
-	qjs rxincrmark.js
-
-	127717
-	125914
-	127243	
-```
-
-The best time was 125914 milliseconds (125.9 seconds, over two minutes)
-
-125914 / 5718.8333 = 22.017
-
-so about 1/22.017 of the native C program.
-
-To give his interpreter a better chance, i also tried running it with "i" as a local variable.
-
-```
-	qjs rxincrmark_local.js
-
-	118546
-	118923
-```
-It did run slightly faster, but, as you can see, it's not a huge improvement.
-
-So I decided not to run a third or fourth test.
-
-__________________________________
-
-cc65 targetting sim65
-
-I had to modify my C program to compile under CC65, but I was able to.
-
-the new program uses an unsigned long rather than unsigned int, which is needed
-
-to get a 4 byte integer.
-
-This took way too long going all the way to 0xFFffFFff so I decided
-
-to reduce the number of iterations by 256, making it 
-
-0xFFffFF
-
-Due to the nature of sim65, I couldn't use a builtin clock, so I had to use the "time" command.
-
-```
-	cl65 rxincrmark_6502.c --target sim6502 -o rxincrmark_6502;
-	sim65 rxincrmark_6502
-
-	4482
-	4330
-	4361
-	4349
-	4215
-	4231
-```
-
-To correct for the division by 256, I decided to multiply each of these by 256
-
-```
-
-	4482 = 1147392		|	19.1232 minutes.
-	4330 = 1108480		|	18.4747 minutes. (ends in 6 repeating, rounded up to 7)
-	4361 = 1116416		|	18.6069 minutes.
-	4349 = 1113344		|	18.5557 minutes.
-	4215 = 1079040		|	17.984  minutes.
-	4231 = 1083136		|	18.0523 minutes. (ends in 6 repeating, rounded up to 3)
-
-```
-
-Clearly, 6502s are not very efficient at doing 32 bit integer incrementing.
-
-
-The source code for all tests is provided in [this repo](https://github.com/gek169/rxincrmark](Rxincrmark)
-
-
-
-
 
 Build Statuses:
 
@@ -399,3 +133,268 @@ for the public domain
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ```
+
+
+
+## How fast is it?
+______________________________
+READER'S NOTE: I was not super serious about making sure that nothing else was happening on the computer
+
+while benchmarks were running.
+
+Notably, I was editting this document in my terminal editor, and sometimes looking at chrome.
+
+I did eventually decide though to turn off the music that was playing on youtube.
+______________________________
+
+I wrote a simple program called "rxincrmark" which calculates how long it takes in milliseconds
+for a busy loop to make 2.1 billion iterations.
+
+The repository for that code is [here](https://github.com/gek169/rxincrmark).
+
+(It has been seperated out due to potential licensing issues in the other scripting languages.)
+
+it's similar to the Linux kernel's idea of "Bogomips".
+
+I wrote this program both in sisa16 assembly language, to run on top of krenel,
+and on WSL2 on my main development machine.
+
+Running native code with the optimizer on, on my skylake machine, 
+I ran the test 6 times and got these numbers:
+
+### Native C
+_________________
+```
+	rxincrmark.c, gcc, -O3 -march=native, volatile variable:
+	
+	5712
+	5795
+	5861
+	5660
+	5640
+	5645
+```
+
+the average number of milliseconds for the native code was 5718.8333333333
+
+this will serve as a baseline.
+
+_________________________________________________________
+### Sisa16
+
+Using a user-mode program written in SISA16 which runs on KRENEL,
+mimicking the C code having a variable in memory (not in registers)
+I got these results:
+
+```
+	rxincrmark.asm,
+	sisa16 userland code, variable is in memory, not in registers
+	
+	47411
+	47284
+	47433
+	47258
+	48435
+	47283
+```
+
+an average of 47517.333333 ms.
+
+47517.3333 / 5718.8333 = 8.3089 
+
+so it runs about 1/8.3 times the speed.
+
+I also decided to run SISA16 without KRENEL to get a more direct comparison of the actual
+
+interpreter's raw performance without the overhead of KRENEL, the operating system I wrote for SISA16.
+
+```
+	rxincrmark_privilieged.asm,
+	assembled into a .dsk image,
+	sisa16 privileged code
+
+	47206
+	47212
+	47212
+	47538
+	47539
+	47433
+```
+
+The results were nearly identical, which is surprising and seems to indicate
+
+that KRENEL's context switches are very lightweight.
+
+Running an Operating System in SISA16 seems to introduce very little overhead! wow!
+
+
+
+For reference, here is how other emulators/interpreters hold up given the same test:
+
+_________________________________________________________
+### Lua 5.4 (granularity is seconds, getting milliseconds was too complicated):
+
+```
+	rxincrmark.lua
+	
+	106000
+	103000
+	 91000
+	 93000
+```
+
+Rather than using the average score, I decided to give lua the best chance and use the best score.
+
+91000 / 5718.8333 = 15.912365
+
+so about 1/15.912 times the speed.
+
+_________________________________________________________
+### Python 3.9.2
+
+Python is typically mocked and scorned for being incredibly slow, however,
+
+I would guess that this comes from the excess use of overly complex data structures and garbage collecting.
+
+As expected, it was the slowest thing I have tested thus far, and thus I only did three iterations.
+
+```
+	rxincrmark.py
+
+	142055.93286
+	141836.07348 (would round up to 9)
+	144037.05126 (would round up to 7)
+```
+
+141836.07348 / 5718.8333 = 24.801575
+
+so python 3 was about 1/24.8 times the speed.
+
+
+________________________________________________________
+### NodeJS
+
+The first time I tried to run the test on nodejs, I got something very strange...
+the result was actually around 3.6-3.7 seconds.
+
+I was stunned, but then I thought about it, and realized it was probably
+
+optimizing the local variable "i" that I was using for the loop down to a single register being incremented,
+
+which I happen to know from previous (invalid) versions of the same benchmark for sisa16, 
+takes about 11-14 seconds.
+
+In order to do a "real" comparison, like the volatile variable in C or SISA16, I needed
+
+to use a global variable.
+
+```
+	node rxincrmark.js
+
+	45573
+	45157
+	45602
+	44895
+```
+
+the best result was 44895,
+
+44895 / 5718.8333 = 7.85
+
+so about 1/7.85 the speed of the native C program.
+
+Sisa16_emu does not use JIT, yet, even with KRENEL running, it is comparable to
+
+a JIT javascript implementation.
+
+A 'proper' implementation of SISA16 with JIT acceleration would be awesome...
+
+__________________________________
+### QuickJS
+
+Fabrice Bellard made a javascript engine, and I'm a big fan of his work, so I decided to use the same
+
+javascript program in his interpreter.
+
+I was hopeful that his interpreter might be faster than lua, but sadly, it is not (in this specific instance)
+
+These took a long time, so I only did 3.
+
+```
+	qjs rxincrmark.js
+
+	127717
+	125914
+	127243	
+```
+
+The best time was 125914 milliseconds (125.9 seconds, over two minutes)
+
+125914 / 5718.8333 = 22.017
+
+so about 1/22.017 of the native C program.
+
+To give his interpreter a better chance, i also tried running it with "i" as a local variable.
+
+```
+	qjs rxincrmark_local.js
+
+	118546
+	118923
+```
+It did run slightly faster, but, as you can see, it's not a huge improvement.
+
+So I decided not to run a third or fourth test.
+
+__________________________________
+
+### cc65 targetting sim65
+
+I had to modify my C program to compile under CC65, but I was able to.
+
+the new program uses an unsigned long rather than unsigned int, which is needed
+
+to get a 4 byte integer.
+
+This took way too long going all the way to 0xFFffFFff so I decided
+
+to reduce the number of iterations by 256, making it 
+
+0xFFffFF
+
+Due to the nature of sim65, I couldn't use a builtin clock, so I had to use the "time" command.
+
+```
+	cl65 rxincrmark_6502.c --target sim6502 -o rxincrmark_6502;
+	sim65 rxincrmark_6502
+
+	4482
+	4330
+	4361
+	4349
+	4215
+	4231
+```
+
+To correct for the division by 256, I decided to multiply each of these by 256
+
+```
+
+	4482 = 1147392		|	19.1232 minutes.
+	4330 = 1108480		|	18.4747 minutes. (ends in 6 repeating, rounded up to 7)
+	4361 = 1116416		|	18.6069 minutes.
+	4349 = 1113344		|	18.5557 minutes.
+	4215 = 1079040		|	17.984  minutes.
+	4231 = 1083136		|	18.0523 minutes. (ends in 6 repeating, rounded up to 3)
+
+```
+
+Clearly, 6502s are not very efficient at doing 32 bit integer incrementing.
+
+
+The source code for all tests is provided in [this repo](https://github.com/gek169/rxincrmark](Rxincrmark)
+
+
+
+
+
