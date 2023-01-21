@@ -71,7 +71,7 @@ ______________________________
 I wrote a simple program called "rxincrmark" which calculates how long it takes in milliseconds
 for a busy loop to make 2.1 billion iterations.
 
-The repository for that code is [here](https://github.com/gek169/rxincrmark](Rxincrmark).
+The repository for that code is [here](https://github.com/gek169/rxincrmark).
 
 (It has been seperated out due to potential licensing issues in the other scripting languages.)
 
