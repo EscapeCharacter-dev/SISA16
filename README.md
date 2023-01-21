@@ -60,11 +60,6 @@ Platforms planned to be tested:
 
 Build Statuses:
 
-gek169/Simple_ISA:
-
-Ubuntu (x86_64):
-![build personal](https://github.com/gek169/Simple_ISA/actions/workflows/c-cpp.yml/badge.svg)
-
 C-Chads/Simple_ISA:
 
 Ubuntu (x86_64):
