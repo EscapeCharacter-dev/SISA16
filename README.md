@@ -1,30 +1,21 @@
-# Notice: Archived
-While this project is quite advanced, I have realized that too many design decisions were made incorrectly near the beginning of the project.
+# Notice: Development on hold
 
-As such, I'm killing it. For me, this particular project is over.
+Development of the emulator is on hold until I receive affirming prayer that this is what I should be working on.
+I will, however, note changes i'd like to make here:
 
-The code will remain on github (but not gitlab) for reference and educational purposes.
-
-A new emulator should be written, which is similar to this one, but with the following changes:
 ```
-* Memory should be word-addressed rather than byte-addressed. This allows the implementation to be endian-agnostic, and a 32 bit uint could address up to 16 Gigabytes of memory. The implementation should allow different per-process memory sizes.
+1. Add 256 bytes to the end of every single process memory and change memory reads/writes to mask 0xffFFff only for the start address, 
+	then do the multi-byte read/write. This will mean that there will be buggy behavior when trying to execute instructions
+	whose arguments straddle the end of the 16 megabyte image, and there will be 'secretly' 3 extra accessible bytes in memory.
+	I consider this fine.
+2. (implementing 1) Implement multi-byte reads/writes in such a way that they will compile to a bswap instruction on x86_64. This should improve performance signifncantly, might even bring the emulator's speed within the same order as native C. This should be done with inline functions, not macros, to clean up the emulator's code and improve maintainability. Hundreds of instructions need to be changed to use the new functions.
 
-String functions would then receive a uint32_t pointer, each of the elements of which would contain 4 chars, which could be handled individually.
-* Separate program and work RAM per process. Dedicated instructions should be implemented for the privileged process to copy to a task's program memory, either to replace all the existing code, or append new instructions to the end. The privileged process should also be able to copy to its own program memory, and if it overwrites it own program, simply reset the program counter and call stack.
-* No jump-through-register, in fact, no ability to jump to a non-immediate address at all, as it cannot be JIT'd
-* immediate address, Relative jumps (ret of course should use a fixed address...) only, which makes position independent code very easy.
-* Dedicated call stack memory irrespective of the work-RAM stack pointer. The work-ram stack pointer should be saved upon a call and restored upon a return, to allow for easy function memory control.
-* A different opcode system should be used:
-upper 8 bits are the operation type (E.g., add, mul, sub, jump...)
-upper-middle 8 bits are the destination register if applicable
-lower-middle 8 bits are the source register if applicable, or single-opcode data.
-bottom 8 bits: used for single-opcode data.
+This stack overflow post: https://stackoverflow.com/questions/36497605/how-to-make-gcc-generate-bswap-instruction-for-big-endian-store-without-builtins
+shows how to do the implementation in a portable way that doesn't use __builtin_bswap.
 
-with each opcode optionally receiving one or two uint32_t's as arguments.
-
-
-(TODO: when I have time, brainstorm SISA64)
 ```
+
+________________________________________________
 # Replace the CPU!
 
 SISA16 is a lightweight high-performance minimal virtual machine designed for the replacement of the host CPU.
