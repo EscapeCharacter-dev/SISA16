@@ -1,3 +1,9 @@
+________________________________________________
+# SISA-16 by [gek169](https://github.com/gek169)
+This is a fork of the original C-Chads/SISA-16 repo. All files (except this one) have been left untouched, and are kept
+for archival purposes. The rest of this README is the original, when the repository was forked & archived.
+
+________________________________________________
 # Notice: Development on hold
 
 Development of the emulator is on hold until I receive affirming prayer that this is what I should be working on.
@@ -8,7 +14,8 @@ I will, however, note changes i'd like to make here:
 	then do the multi-byte read/write. This will mean that there will be buggy behavior when trying to execute instructions
 	whose arguments straddle the end of the 16 megabyte image, and there will be 'secretly' 3 extra accessible bytes in memory.
 	I consider this fine.
-2. (implementing 1) Implement multi-byte reads/writes in such a way that they will compile to a bswap instruction on x86_64. This should improve performance signifncantly, might even bring the emulator's speed within the same order as native C. This should be done with inline functions, not macros, to clean up the emulator's code and improve maintainability. Hundreds of instructions need to be changed to use the new functions.
+2. (implementing 1) Implement multi-byte reads/writes in such a way that they will compile to a bswap instruction on x86_64. This should improve performance signifncantly, might even bring the emulator's speed within the same order as native C. This should be done with inline functions, not macros, to clean up the emulator's code and improve maintainability. Hundreds of instructions need to be changed to use the new functions.![image](https://user-images.githubusercontent.com/30359139/215233436-c57f0551-86e9-4545-b104-cb0fc4d014b9.png)
+
 
 This stack overflow post: https://stackoverflow.com/questions/36497605/how-to-make-gcc-generate-bswap-instruction-for-big-endian-store-without-builtins
 shows how to do the implementation in a portable way that doesn't use __builtin_bswap.
